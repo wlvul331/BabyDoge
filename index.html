@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>載入中...</title>
+    <title>MBABYDOGE/USDT 即時價格</title>
     <style>
         * {
             margin: 0;
@@ -21,97 +21,54 @@
             text-align: center;
             flex-direction: column;
         }
-        .loader-container {
-            text-align: center;
-        }
-        .progress-bar {
-            width: 200px;
-            height: 10px;
-            background-color: #444;
-            border-radius: 5px;
-            overflow: hidden;
-            margin-top: 10px;
-            position: relative;
-        }
-        .progress {
-            width: 0;
-            height: 100%;
-            background-color: #00bcd4;
-            transition: width 0.1s ease-in-out;
-        }
-        .percentage {
-            margin-top: 5px;
-            font-size: 18px;
-        }
-        .price-container {
-            display: none;
-            font-size: 24px;
-            margin-top: 20px;
+        .price {
+            font-size: 32px;
+            font-weight: bold;
+            transition: color 0.3s ease-in-out;
         }
     </style>
 </head>
 <body>
 
-    <div class="loader-container">
-        <p>載入中...</p>
-        <div class="progress-bar">
-            <div class="progress"></div>
-        </div>
-        <p class="percentage">0%</p>
-    </div>
-
-    <div class="price-container">
-        <h1>載入完成！</h1>
-        <p>MBABYDOGE/USDT 當前價格：<span id="price">載入中...</span></p>
-    </div>
+    <p>MBABYDOGE/USDT 當前價格：</p>
+    <p class="price" id="price">載入中...</p>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            let progress = document.querySelector('.progress');
-            let percentageText = document.querySelector('.percentage');
-            let loaderContainer = document.querySelector('.loader-container');
-            let priceContainer = document.querySelector('.price-container');
-            let priceText = document.getElementById('price');
-            let percent = 0;
+        let lastPrice = null;  // 儲存上一個價格
 
-            let interval = setInterval(() => {
-                percent += 5;
-                if (percent > 100) {
-                    percent = 100;
-                    clearInterval(interval);
-                    
-                    // 隱藏載入動畫，顯示價格資訊
-                    loaderContainer.style.display = 'none';
-                    priceContainer.style.display = 'block';
+        function connectWebSocket() {
+            const ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
 
-                    // 連線到 Binance WebSocket 並訂閱價格更新
-                    connectWebSocket();
-                }
-                progress.style.width = percent + "%";
-                percentageText.textContent = percent + "%";
-            }, 100);
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.c) {  // `c` 是最新成交價格
+                    const newPrice = parseFloat(data.c);
+                    const priceElement = document.getElementById('price');
 
-            function connectWebSocket() {
-                const ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
+                    // 設定價格顯示
+                    priceElement.textContent = newPrice;
 
-                ws.onmessage = function(event) {
-                    const data = JSON.parse(event.data);
-                    if (data.c) {  // `c` 是最新成交價格
-                        priceText.textContent = data.c;
+                    // 根據價格變化調整顏色
+                    if (lastPrice !== null) {
+                        priceElement.style.color = newPrice > lastPrice ? "#00bcd4" : "orangered";
                     }
-                };
+                    
+                    lastPrice = newPrice; // 更新上一個價格
+                }
+            };
 
-                ws.onclose = function() {
-                    console.log('WebSocket 連線已關閉，重新連線...');
-                    setTimeout(connectWebSocket, 5000); // 5 秒後重新連線
-                };
+            ws.onclose = function() {
+                console.log('WebSocket 連線已關閉，重新連線...');
+                setTimeout(connectWebSocket, 5000); // 5 秒後重新連線
+            };
 
-                ws.onerror = function(error) {
-                    console.error('WebSocket 錯誤:', error);
-                    ws.close();
-                };
-            }
-        });
+            ws.onerror = function(error) {
+                console.error('WebSocket 錯誤:', error);
+                ws.close();
+            };
+        }
+
+        connectWebSocket();
     </script>
 
 </body>
