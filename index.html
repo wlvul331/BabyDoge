@@ -19,6 +19,7 @@
             color: #fff;
             font-family: Arial, sans-serif;
             text-align: center;
+            flex-direction: column;
         }
         .loader-container {
             text-align: center;
@@ -42,6 +43,11 @@
             margin-top: 5px;
             font-size: 18px;
         }
+        .price-container {
+            display: none;
+            font-size: 24px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
@@ -54,36 +60,57 @@
         <p class="percentage">0%</p>
     </div>
 
+    <div class="price-container">
+        <h1>載入完成！</h1>
+        <p>MBABYDOGE/USDT 當前價格：<span id="price">載入中...</span></p>
+    </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             let progress = document.querySelector('.progress');
             let percentageText = document.querySelector('.percentage');
+            let loaderContainer = document.querySelector('.loader-container');
+            let priceContainer = document.querySelector('.price-container');
+            let priceText = document.getElementById('price');
             let percent = 0;
-            
+
             let interval = setInterval(() => {
                 percent += 5;
                 if (percent > 100) {
                     percent = 100;
                     clearInterval(interval);
-                    fetch('https://api.binance.com/api/v3/ticker/price?symbol=1MBABYDOGEUSDT')
-                        .then(response => response.json())
-                        .then(data => {
-                            document.body.innerHTML = `
-                                <h1 style='text-align: center;'>載入完成！</h1>
-                                <p style='text-align: center;'>MBABYDOGE/USDT 當前價格：${data.price}</p>
-                            `;
-                        })
-                        .catch(error => {
-                            document.body.innerHTML = `
-                                <h1 style='text-align: center;'>載入完成！</h1>
-                                <p style='text-align: center;'>無法獲取價格資訊。</p>
-                            `;
-                            console.error('Error fetching price:', error);
-                        });
+                    
+                    // 隱藏載入動畫，顯示價格資訊
+                    loaderContainer.style.display = 'none';
+                    priceContainer.style.display = 'block';
+
+                    // 連線到 Binance WebSocket 並訂閱價格更新
+                    connectWebSocket();
                 }
                 progress.style.width = percent + "%";
                 percentageText.textContent = percent + "%";
             }, 100);
+
+            function connectWebSocket() {
+                const ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
+
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    if (data.c) {  // `c` 是最新成交價格
+                        priceText.textContent = data.c;
+                    }
+                };
+
+                ws.onclose = function() {
+                    console.log('WebSocket 連線已關閉，重新連線...');
+                    setTimeout(connectWebSocket, 5000); // 5 秒後重新連線
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket 錯誤:', error);
+                    ws.close();
+                };
+            }
         });
     </script>
 
