@@ -57,6 +57,7 @@
         .price {
             font-size: 32px;
             font-weight: bold;
+            color: #00bcd4; /* 初始顏色統一為漲的顏色 */
             transition: color 0.3s ease-in-out;
         }
     </style>
@@ -123,12 +124,14 @@
                         }, 500);
                     }
 
-                    // 設定價格顯示 (保留 8 位小數)
-                    priceText.textContent = newPrice.toFixed(8);
+                    // 設定價格顯示 (保留 13 位小數)
+                    priceText.textContent = newPrice.toFixed(13);
 
                     // 根據價格變化調整顏色
                     if (lastPrice !== null) {
                         priceText.style.color = newPrice > lastPrice ? "#00bcd4" : "orangered";
+                    } else {
+                        priceText.style.color = "#00bcd4"; // 初始顏色保持藍綠色
                     }
                     
                     lastPrice = newPrice; // 更新上一個價格
