@@ -22,23 +22,6 @@
             flex-direction: column;
             overflow: hidden;
         }
-        .progress-container {
-            width: 80%;
-            height: 5px;
-            background: transparent;
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        .progress-bar {
-            height: 5px;
-            background-color: #00bcd4;
-            width: 0%;
-            transition: width 0.2s ease-in-out;
-        }
         .content {
             display: none;
             flex-direction: column;
@@ -47,10 +30,10 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            transition: top 0.6s ease-in-out;
+            transition: top 0.5s ease-in-out;
         }
         .move-to-top {
-            top: 15%;
+            top: 10%;
         }
         .header {
             display: flex;
@@ -83,14 +66,36 @@
             transition: color 0.3s ease-in-out;
             margin-top: 10px;
         }
+        /* 盈虧區塊 */
+        .profit-selection {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            opacity: 0;
+            transform: scaleX(0);
+            transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            position: relative;
+        }
+        .profit-selection span {
+            padding: 5px 15px;
+            position: relative;
+            cursor: pointer;
+        }
+        .underline {
+            position: absolute;
+            bottom: -3px;
+            height: 3px;
+            width: 60px;
+            background-color: #00bcd4;
+            transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body>
-
-    <div class="progress-container" id="progressContainer">
-        <div class="progress-bar" id="progressBar"></div>
-        <p id="progressText">0%</p>
-    </div>
 
     <div class="content" id="content">
         <div class="header">
@@ -99,6 +104,14 @@
             <div class="change-box" id="change">載入中...</div>
         </div>
         <p class="price" id="price">載入中...</p>
+
+        <!-- 盈虧選擇 -->
+        <div class="profit-selection" id="profitSelection">
+            <span id="carterProfit">Carter盈虧</span>
+            <span id="hannahProfit">Hannah盈虧</span>
+            <span id="settings">設定</span>
+            <div class="underline" id="underline"></div>
+        </div>
     </div>
 
     <script>
@@ -106,10 +119,10 @@
         let oneDayAgoPrice = null;
         let priceText = document.getElementById('price');
         let changeBox = document.getElementById('change');
-        let progressBar = document.getElementById('progressBar');
-        let progressContainer = document.getElementById('progressContainer');
         let content = document.getElementById('content');
-        let progressText = document.getElementById('progressText');
+        let profitSelection = document.getElementById('profitSelection');
+        let underline = document.getElementById('underline');
+        let selections = document.querySelectorAll(".profit-selection span");
 
         async function fetchOneDayAgoPrice() {
             try {
@@ -124,20 +137,8 @@
             }
         }
 
-        function updateProgressBar(progress) {
-            progressBar.style.width = `${progress}%`;
-            progressText.textContent = `${progress}%`;
-        }
-
         function connectWebSocket() {
             const ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
-
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 10;
-                updateProgressBar(progress);
-                if (progress >= 90) clearInterval(interval);
-            }, 200);
 
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
@@ -162,30 +163,31 @@
 
                     lastPrice = newPrice;
 
-                    clearInterval(interval);
-                    updateProgressBar(100);
-                    
                     setTimeout(() => {
-                        progressContainer.style.display = "none";
                         content.style.display = "flex";
-
                         setTimeout(() => {
                             content.classList.add("move-to-top");
+                            profitSelection.style.opacity = "1";
+                            profitSelection.style.transform = "scaleX(1)";
+                            updateUnderline(document.getElementById("carterProfit"));
                         }, 50);
-                    }, 100);
+                    }, 50);
                 }
             };
-
-            ws.onclose = function() {
-                console.log('WebSocket 連線已關閉，重新連線...');
-                setTimeout(connectWebSocket, 5000);
-            };
-
-            ws.onerror = function(error) {
-                console.error('WebSocket 錯誤:', error);
-                ws.close();
-            };
         }
+
+        function updateUnderline(selected) {
+            const selectedRect = selected.getBoundingClientRect();
+            const parentRect = profitSelection.getBoundingClientRect();
+            underline.style.width = `${selectedRect.width * 0.6}px`; 
+            underline.style.transform = `translateX(${selected.offsetLeft + selected.offsetWidth / 2 - underline.offsetWidth / 2}px)`;
+        }
+
+        selections.forEach(selection => {
+            selection.addEventListener("click", () => {
+                updateUnderline(selection);
+            });
+        });
 
         async function init() {
             await fetchOneDayAgoPrice();
