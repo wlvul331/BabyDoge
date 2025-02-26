@@ -22,6 +22,22 @@
             flex-direction: column;
             overflow: hidden;
         }
+        .progress-container {
+            width: 80%;
+            height: 5px;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .progress-bar {
+            height: 5px;
+            background-color: #00bcd4;
+            width: 0%;
+            transition: width 0.2s ease-in-out;
+        }
         .content {
             display: none;
             flex-direction: column;
@@ -30,7 +46,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            transition: top 0.5s ease-in-out;
+            transition: top 0.4s ease-in-out;
         }
         .move-to-top {
             top: 10%;
@@ -70,7 +86,7 @@
         .profit-selection {
             display: flex;
             justify-content: center;
-            gap: 50px;
+            gap: 10px;
             opacity: 0;
             transform: scaleX(0);
             transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
@@ -78,24 +94,33 @@
             font-size: 18px;
             font-weight: bold;
             cursor: pointer;
-            position: relative;
         }
         .profit-selection span {
-            padding: 5px 15px;
+            padding: 5px 20px;
             position: relative;
-            cursor: pointer;
         }
-        .underline {
+        .profit-selection span::after {
+            content: "";
             position: absolute;
-            bottom: -3px;
+            width: 33%;
             height: 3px;
-            width: 60px;
+            background-color: transparent;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .profit-selection .selected::after {
             background-color: #00bcd4;
-            transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
         }
     </style>
 </head>
 <body>
+
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-bar" id="progressBar"></div>
+        <p id="progressText">0%</p>
+    </div>
 
     <div class="content" id="content">
         <div class="header">
@@ -105,13 +130,12 @@
         </div>
         <p class="price" id="price">載入中...</p>
 
-        <!-- 盈虧選擇 -->
-        <div class="profit-selection" id="profitSelection">
-            <span id="carterProfit">Carter盈虧</span>
-            <span id="hannahProfit">Hannah盈虧</span>
-            <span id="settings">設定</span>
-            <div class="underline" id="underline"></div>
-        </div>
+       <!-- 盈虧選擇 -->
+       <div class="profit-selection" id="profitSelection">
+           <span id="carterProfit" class="selected">Carter盈虧</span>
+           <span id="hannahProfit">Hannah盈虧</span>
+           <span id="settings">設定</span>
+       </div>
     </div>
 
     <script>
@@ -119,10 +143,13 @@
         let oneDayAgoPrice = null;
         let priceText = document.getElementById('price');
         let changeBox = document.getElementById('change');
+        let progressBar = document.getElementById('progressBar');
+        let progressContainer = document.getElementById('progressContainer');
         let content = document.getElementById('content');
+        let progressText = document.getElementById('progressText');
         let profitSelection = document.getElementById('profitSelection');
-        let underline = document.getElementById('underline');
-        let selections = document.querySelectorAll(".profit-selection span");
+        let carterProfit = document.getElementById('carterProfit');
+        let hannahProfit = document.getElementById('hannahProfit');
 
         async function fetchOneDayAgoPrice() {
             try {
@@ -137,8 +164,20 @@
             }
         }
 
+        function updateProgressBar(progress) {
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${progress}%`;
+        }
+
         function connectWebSocket() {
             const ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                updateProgressBar(progress);
+                if (progress >= 90) clearInterval(interval);
+            }, 150);
 
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
@@ -163,36 +202,46 @@
 
                     lastPrice = newPrice;
 
+                    clearInterval(interval);
+                    updateProgressBar(100);
+                    
                     setTimeout(() => {
+                        progressContainer.style.display = "none";
                         content.style.display = "flex";
+
                         setTimeout(() => {
                             content.classList.add("move-to-top");
                             profitSelection.style.opacity = "1";
                             profitSelection.style.transform = "scaleX(1)";
-                            updateUnderline(document.getElementById("carterProfit"));
-                        }, 50);
+                        }, 100);
                     }, 50);
                 }
             };
         }
 
-        function updateUnderline(selected) {
-            const selectedRect = selected.getBoundingClientRect();
-            const parentRect = profitSelection.getBoundingClientRect();
-            underline.style.width = `${selectedRect.width * 0.6}px`; 
-            underline.style.transform = `translateX(${selected.offsetLeft + selected.offsetWidth / 2 - underline.offsetWidth / 2}px)`;
-        }
-
-        selections.forEach(selection => {
-            selection.addEventListener("click", () => {
-                updateUnderline(selection);
-            });
-        });
-
         async function init() {
             await fetchOneDayAgoPrice();
             connectWebSocket();
         }
+
+       // 點擊切換盈虧選擇
+       carterProfit.addEventListener("click", () => {
+           carterProfit.classList.add("selected");
+           hannahProfit.classList.remove("selected");
+           settings.classList.remove("selected");
+       });
+       
+       hannahProfit.addEventListener("click", () => {
+           hannahProfit.classList.add("selected");
+           carterProfit.classList.remove("selected");
+           settings.classList.remove("selected");
+       });
+       
+       settings.addEventListener("click", () => {
+           settings.classList.add("selected");
+           carterProfit.classList.remove("selected");
+           hannahProfit.classList.remove("selected");
+       });
 
         init();
     </script>
