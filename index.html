@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -65,9 +65,21 @@
                 if (percent > 100) {
                     percent = 100;
                     clearInterval(interval);
-                    setTimeout(() => {
-                        document.body.innerHTML = "<h1 style='text-align: center;'>載入完成！</h1>";
-                    }, 500);
+                    fetch('https://api.binance.com/api/v3/ticker/price?symbol=MBABYDOGEUSDT')
+                        .then(response => response.json())
+                        .then(data => {
+                            document.body.innerHTML = `
+                                <h1 style='text-align: center;'>載入完成！</h1>
+                                <p style='text-align: center;'>MBABYDOGE/USDT 當前價格：${data.price}</p>
+                            `;
+                        })
+                        .catch(error => {
+                            document.body.innerHTML = `
+                                <h1 style='text-align: center;'>載入完成！</h1>
+                                <p style='text-align: center;'>無法獲取價格資訊。</p>
+                            `;
+                            console.error('Error fetching price:', error);
+                        });
                 }
                 progress.style.width = percent + "%";
                 percentageText.textContent = percent + "%";
