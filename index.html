@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>載入中...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .loader-container {
+            text-align: center;
+        }
+        .progress-bar {
+            width: 200px;
+            height: 10px;
+            background-color: #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress {
+            width: 0;
+            height: 100%;
+            background-color: #3498db;
+            transition: width 1.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loader-container">
+        <p>載入中...</p>
+        <div class="progress-bar">
+            <div class="progress"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let progress = document.querySelector('.progress');
+            setTimeout(() => {
+                progress.style.width = "100%";
+            }, 100);
+            
+            setTimeout(() => {
+                document.body.innerHTML = "<h1>載入完成！</h1>";
+            }, 2000);
+        });
+    </script>
+
+</body>
+</html>
