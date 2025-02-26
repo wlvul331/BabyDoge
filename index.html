@@ -65,7 +65,7 @@
                 if (percent > 100) {
                     percent = 100;
                     clearInterval(interval);
-                    fetch('https://api.binance.com/api/v3/ticker/price?symbol=MBABYDOGEUSDT')
+                    fetch('https://api.binance.com/api/v3/ticker/price?symbol=1MBABYDOGEUSDT')
                         .then(response => response.json())
                         .then(data => {
                             document.body.innerHTML = `
