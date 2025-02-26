@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MBABYDOGE/USDT 即時價格</title>
+    <title>BABYDOGE/USDT 即時價格</title>
     <style>
         * {
             margin: 0;
@@ -45,6 +45,16 @@
         }
         .price-container {
             display: none;
+            text-align: center;
+        }
+        .price-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .price-title span {
+            font-size: 16px; /* USDT 字體較小 */
+        }
+        .price {
             font-size: 32px;
             font-weight: bold;
             transition: color 0.3s ease-in-out;
@@ -61,7 +71,10 @@
         <p class="percentage">0%</p>
     </div>
 
-    <p class="price-container" id="price">載入中...</p>
+    <div class="price-container">
+        <p class="price-title">BABYDOGE/<span>USDT</span></p>
+        <p class="price" id="price">載入中...</p>
+    </div>
 
     <script>
         let lastPrice = null; // 上一次的價格
@@ -96,7 +109,8 @@
             ws.onmessage = function(event) {
                 const data = JSON.parse(event.data);
                 if (data.c) {  // `c` 是最新成交價格
-                    const newPrice = parseFloat(data.c);
+                    const rawPrice = parseFloat(data.c);
+                    const newPrice = rawPrice / 1000000;  // 除以 1,000,000
 
                     if (!isDataReceived) {
                         isDataReceived = true;
@@ -109,8 +123,8 @@
                         }, 500);
                     }
 
-                    // 設定價格顯示
-                    priceText.textContent = newPrice;
+                    // 設定價格顯示 (保留 8 位小數)
+                    priceText.textContent = newPrice.toFixed(8);
 
                     // 根據價格變化調整顏色
                     if (lastPrice !== null) {
