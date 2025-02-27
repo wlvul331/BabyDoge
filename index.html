@@ -102,7 +102,7 @@
     /* 盈虧選擇選單 */
     .profit-selection {
       display: flex;
-      justify-content: center;
+      justify-content: flex-start;
       gap: 0.05px;
       opacity: 0;
       transform: scaleX(0);
@@ -110,8 +110,12 @@
       margin-top: 0.05px;
       font-size: 18px;
       font-weight: bold;
-      cursor: pointer;
       position: relative;
+      user-select: none;
+      /* 允許水平滾動 */
+      overflow-x: auto;
+      white-space: nowrap;
+      cursor: grab;
     }
     .profit-selection.expand {
       opacity: 1;
@@ -121,6 +125,7 @@
       padding: 5px 20px;
       position: relative;
       z-index: 1;
+      flex-shrink: 0;
     }
     .profit-selection span.selected {
       color: #000;
@@ -140,6 +145,7 @@
       width: 100vw;
       margin-top: 20px;
       padding: 0;
+      cursor: grab;
     }
     .profit-details {
       width: 100vw;
@@ -227,15 +233,15 @@
   </div>
   <!-- 內容區：選單與盈虧資訊 -->
   <div class="content" id="content">
-    <!-- 盈虧選擇選單（新增第三選單 Eric） -->
+    <!-- 盈虧選擇選單 -->
     <div class="profit-selection" id="profitSelection">
       <span id="carterProfit" class="selected">Carter</span>
       <span id="hannahProfit">Hannah</span>
       <span id="ericProfit">Eric</span>
       <div class="slider"></div>
     </div>
-    <!-- 盈虧詳細資訊（固定格式，共用區塊） -->
-    <div class="profit-details-container">
+    <!-- 盈虧詳細資訊 -->
+    <div class="profit-details-container" id="profitDetailsContainer">
       <div class="profit-details active" id="profitDetails">
         <p>
           <span class="label">總持倉量 (BABYDOGE):</span>
@@ -272,6 +278,7 @@
     let oneDayAgoPrice = null;
     let exchangeRate = 0;
     let activeProfile = 'carter';  // 預設顯示 Carter
+
     const priceText = document.getElementById('price');
     const changeBox = document.getElementById('change');
     const progressBar = document.getElementById('progressBar');
@@ -285,7 +292,8 @@
     const ericProfit = document.getElementById('ericProfit');
     const usdRateElem = document.getElementById('usdRateValue');
     const sliderElement = profitSelection.querySelector('.slider');
-    
+    const profitDetailsContainer = document.getElementById('profitDetailsContainer');
+
     // 固定資料設定
     const profiles = {
       carter: {
@@ -301,6 +309,9 @@
         totalAmount: 40468291459
       }
     };
+
+    // 定義選單順序（用於盈虧訊息拖曳切換）
+    const profilesOrder = ["carter", "hannah", "eric"];
 
     // 更新盈虧資訊
     function updateProfile(profileKey, currentPrice) {
@@ -376,7 +387,14 @@
             const changePercent = ((newPrice - oneDayAgoPrice) / oneDayAgoPrice) * 100;
             const sign = changePercent >= 0 ? "+" : "-";
             changeBox.textContent = `${sign}${Math.abs(changePercent).toFixed(2)}%`;
-            changeBox.style.backgroundColor = changePercent >= 0 ? "#00bcd4" : "orangered";
+            if(changePercent >= 0){
+              // 正值以藍色漸變效果顯示
+              changeBox.style.backgroundImage = "linear-gradient(90deg, #00bcd4, #00ffcc)";
+              changeBox.style.backgroundColor = "";
+            } else {
+              changeBox.style.backgroundColor = "orangered";
+              changeBox.style.backgroundImage = "";
+            }
           }
           lastPrice = newPrice;
           updateProfile(activeProfile, newPrice);
@@ -407,22 +425,18 @@
       connectWebSocket();
     }
 
-    // 更新 slider 位置與寬度
+    // 更新 slider 位置與寬度 (考慮到 container 滾動)
     function updateSlider() {
       const selected = document.querySelector('.profit-selection span.selected');
       if (!selected) return;
-      const rect = selected.getBoundingClientRect();
       const containerRect = profitSelection.getBoundingClientRect();
-      const left = rect.left - containerRect.left;
+      const selectedRect = selected.getBoundingClientRect();
+      const left = selectedRect.left - containerRect.left + profitSelection.scrollLeft;
       sliderElement.style.left = left + "px";
-      sliderElement.style.width = rect.width + "px";
+      sliderElement.style.width = selectedRect.width + "px";
     }
 
-    // 全域預先載入音效
-    const slideUpAudio = new Audio('audio/slide-up.mp3');
-    slideUpAudio.load();
-    
-    // 點選選單時觸發音效及切換顯示
+    // 點選選單（點擊方式）
     carterProfit.addEventListener("click", () => {
       activeProfile = 'carter';
       slideUpAudio.currentTime = 0;
@@ -458,7 +472,80 @@
       updateSlider();
     };
 
-    // 點擊幣種圖片時累計旋轉 360°
+    // --- 以下為「選單區域拖曳」功能（拖曳整個 profit-selection 區域水平滾動） ---
+    let isContainerDragging = false;
+    let containerDragStartX = 0;
+    let containerScrollStart = 0;
+    let containerDragMoved = false;
+
+    profitSelection.addEventListener("mousedown", (e) => {
+      // 若點擊目標非 span（或即將拖曳），則開始滾動
+      isContainerDragging = true;
+      containerDragStartX = e.pageX;
+      containerScrollStart = profitSelection.scrollLeft;
+      containerDragMoved = false;
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isContainerDragging) return;
+      const dx = e.pageX - containerDragStartX;
+      if (!containerDragMoved && Math.abs(dx) > 5) {
+        containerDragMoved = true;
+      }
+      profitSelection.scrollLeft = containerScrollStart - dx;
+      updateSlider();
+    });
+
+    window.addEventListener("mouseup", (e) => {
+      if (isContainerDragging) {
+        isContainerDragging = false;
+      }
+    });
+
+    // --- 以下為「盈虧訊息區拖曳」功能 ---
+    // 拖曳 profitDetailsContainer 超過門檻後，根據拖曳方向切換至相鄰選單項目
+    let isSwiping = false;
+    let swipeStartX = 0;
+    const swipeThreshold = 50; // 門檻值
+
+    profitDetailsContainer.addEventListener("mousedown", (e) => {
+      swipeStartX = e.clientX;
+      isSwiping = false;
+    });
+
+    profitDetailsContainer.addEventListener("mousemove", (e) => {
+      const dx = e.clientX - swipeStartX;
+      if (!isSwiping && Math.abs(dx) > 5) {
+        isSwiping = true;
+      }
+    });
+
+    profitDetailsContainer.addEventListener("mouseup", (e) => {
+      if (isSwiping) {
+        const deltaX = e.clientX - swipeStartX;
+        if (Math.abs(deltaX) > swipeThreshold) {
+          let currentIndex = profilesOrder.indexOf(activeProfile);
+          if (deltaX < 0 && currentIndex < profilesOrder.length - 1) {
+            activeProfile = profilesOrder[currentIndex + 1];
+          } else if (deltaX > 0 && currentIndex > 0) {
+            activeProfile = profilesOrder[currentIndex - 1];
+          }
+          // 更新選單選中狀態
+          document.querySelectorAll('.profit-selection span').forEach(span => {
+            span.classList.remove("selected");
+          });
+          document.getElementById(activeProfile + "Profit").classList.add("selected");
+          updateSlider();
+          if (lastPrice !== null) {
+            updateProfile(activeProfile, lastPrice);
+          }
+          slideUpAudio.currentTime = 0;
+          slideUpAudio.play().catch(err => console.log("播放音效失敗:", err));
+        }
+      }
+    });
+
+    // --- 幣種圖片點擊旋轉 ---
     const coinImage = document.getElementById('coinImage');
     let rotationAngle = 0;
     coinImage.addEventListener("click", () => {
@@ -467,6 +554,10 @@
     });
 
     window.addEventListener('resize', updateSlider);
+
+    // 全域預先載入音效
+    const slideUpAudio = new Audio('audio/slide-up.mp3');
+    slideUpAudio.load();
 
     init();
   </script>
