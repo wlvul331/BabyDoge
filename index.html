@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BABYDOGE/USDT 即時價格</title>
     <style>
+        /* 原有的 CSS 樣式保持不變 */
         * {
             margin: 0;
             padding: 0;
@@ -82,7 +83,6 @@
             transition: color 0.3s ease-in-out;
             margin-top: 10px;
         }
-        /* 盈虧區塊 */
         .profit-selection {
             display: flex;
             justify-content: center;
@@ -105,13 +105,40 @@
             width: 33%;
             height: 3px;
             background-color: transparent;
-            bottom: -5px;
+            bottom: 6px;
             left: 50%;
             transform: translateX(-50%);
             transition: background-color 0.3s, transform 0.3s;
         }
         .profit-selection .selected::after {
             background-color: #00bcd4;
+            transform: translateX(-50%) scaleX(1);
+        }
+        .profit-details {
+            display: none;
+            margin-top: 20px;
+            font-size: 16px;
+            text-align: left;
+            width: 100%;
+            padding: 0 20px;
+        }
+        .profit-details.active {
+            display: block;
+        }
+        .profit-details p {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .profit-details p span {
+            text-align: right;
+        }
+        .positive {
+            color: #00bcd4;
+        }
+        .negative {
+            color: orangered;
         }
     </style>
 </head>
@@ -130,12 +157,31 @@
         </div>
         <p class="price" id="price">載入中...</p>
 
-       <!-- 盈虧選擇 -->
-       <div class="profit-selection" id="profitSelection">
-           <span id="carterProfit" class="selected">Carter</span>
-           <span id="hannahProfit">Hannah</span>
-           <span id="settings">設定</span>
-       </div>
+        <!-- 盈虧選擇 -->
+        <div class="profit-selection" id="profitSelection">
+            <span id="carterProfit" class="selected">Carter</span>
+            <span id="hannahProfit">Hannah</span>
+        </div>
+
+        <!-- Carter 的盈虧詳細資訊 -->
+        <div class="profit-details active" id="carterDetails">
+            <p>總持倉量 (BABYDOGE): <span>21,235,769,401,342.17</span></p>
+            <p>總成本 (TWD): <span>1,690,000</span></p>
+            <p>持倉價值 (TWD): <span id="carterValue">計算中...</span></p>
+            <p>購入均價 (USD): <span id="carterAvgPrice">計算中...</span></p>
+            <p>未實現盈虧 (TWD): <span id="carterUnrealized">計算中...</span></p>
+            <p>盈虧率: <span id="carterProfitRate">計算中...</span></p>
+        </div>
+
+        <!-- Hannah 的盈虧詳細資訊 -->
+        <div class="profit-details" id="hannahDetails">
+            <p>總持倉量 (BABYDOGE): <span>411,486,486,486</span></p>
+            <p>總成本 (TWD): <span>20,000</span></p>
+            <p>持倉價值 (TWD): <span id="hannahValue">計算中...</span></p>
+            <p>購入均價 (USD): <span id="hannahAvgPrice">計算中...</span></p>
+            <p>未實現盈虧 (TWD): <span id="hannahUnrealized">計算中...</span></p>
+            <p>盈虧率: <span id="hannahProfitRate">計算中...</span></p>
+        </div>
     </div>
 
     <script>
@@ -150,6 +196,17 @@
         let profitSelection = document.getElementById('profitSelection');
         let carterProfit = document.getElementById('carterProfit');
         let hannahProfit = document.getElementById('hannahProfit');
+        let carterDetails = document.getElementById('carterDetails');
+        let hannahDetails = document.getElementById('hannahDetails');
+
+        // Carter 和 Hannah 的固定數據
+        const carterTotalCostTWD = 1690000; // Carter 的總成本 (TWD)
+        const hannahTotalCostTWD = 20000; // Hannah 的總成本 (TWD)
+        const carterTotalAmount = 21235769401342.17; // Carter 的總持倉量 (BABYDOGE)
+        const hannahTotalAmount = 411486486486; // Hannah 的總持倉量 (BABYDOGE)
+
+        // 匯率假設 (1 USD = 32.83 TWD)
+        const exchangeRate = 32.83;
 
         async function fetchOneDayAgoPrice() {
             try {
@@ -167,6 +224,43 @@
         function updateProgressBar(progress) {
             progressBar.style.width = `${progress}%`;
             progressText.textContent = `${progress}%`;
+        }
+
+        function calculateProfit(currentPrice) {
+            // Carter 的計算
+            const carterValueTWD = carterTotalAmount * currentPrice * exchangeRate;
+            const carterAvgPriceUSD = carterTotalCostTWD / exchangeRate / carterTotalAmount;
+            const carterUnrealizedTWD = carterValueTWD - carterTotalCostTWD;
+            const carterProfitRate = (carterUnrealizedTWD / carterTotalCostTWD) * 100;
+
+            // Hannah 的計算
+            const hannahValueTWD = hannahTotalAmount * currentPrice * exchangeRate;
+            const hannahAvgPriceUSD = hannahTotalCostTWD / exchangeRate / hannahTotalAmount;
+            const hannahUnrealizedTWD = hannahValueTWD - hannahTotalCostTWD;
+            const hannahProfitRate = (hannahUnrealizedTWD / hannahTotalCostTWD) * 100;
+
+            // 更新 Carter 的盈虧資訊
+            document.getElementById('carterValue').textContent = carterValueTWD.toFixed(2);
+            document.getElementById('carterAvgPrice').textContent = carterAvgPriceUSD.toFixed(13);
+            document.getElementById('carterUnrealized').textContent = carterUnrealizedTWD.toFixed(2);
+            document.getElementById('carterProfitRate').textContent = carterProfitRate.toFixed(2) + "%";
+
+            // 更新 Hannah 的盈虧資訊
+            document.getElementById('hannahValue').textContent = hannahValueTWD.toFixed(2);
+            document.getElementById('hannahAvgPrice').textContent = hannahAvgPriceUSD.toFixed(13);
+            document.getElementById('hannahUnrealized').textContent = hannahUnrealizedTWD.toFixed(2);
+            document.getElementById('hannahProfitRate').textContent = hannahProfitRate.toFixed(2) + "%";
+
+            // 根據盈虧變化顏色
+            const carterUnrealizedElement = document.getElementById('carterUnrealized');
+            const carterProfitRateElement = document.getElementById('carterProfitRate');
+            const hannahUnrealizedElement = document.getElementById('hannahUnrealized');
+            const hannahProfitRateElement = document.getElementById('hannahProfitRate');
+
+            carterUnrealizedElement.className = carterUnrealizedTWD >= 0 ? "positive" : "negative";
+            carterProfitRateElement.className = carterProfitRate >= 0 ? "positive" : "negative";
+            hannahUnrealizedElement.className = hannahUnrealizedTWD >= 0 ? "positive" : "negative";
+            hannahProfitRateElement.className = hannahProfitRate >= 0 ? "positive" : "negative";
         }
 
         function connectWebSocket() {
@@ -202,6 +296,9 @@
 
                     lastPrice = newPrice;
 
+                    // 計算 Carter 和 Hannah 的盈虧
+                    calculateProfit(newPrice);
+
                     clearInterval(interval);
                     updateProgressBar(100);
                     
@@ -224,27 +321,30 @@
             connectWebSocket();
         }
 
-       // 點擊切換盈虧選擇
-       carterProfit.addEventListener("click", () => {
-           carterProfit.classList.add("selected");
-           hannahProfit.classList.remove("selected");
-           settings.classList.remove("selected");
-       });
-       
-       hannahProfit.addEventListener("click", () => {
-           hannahProfit.classList.add("selected");
-           carterProfit.classList.remove("selected");
-           settings.classList.remove("selected");
-       });
-       
-       settings.addEventListener("click", () => {
-           settings.classList.add("selected");
-           carterProfit.classList.remove("selected");
-           hannahProfit.classList.remove("selected");
-       });
+        // 點擊切換盈虧選擇
+        carterProfit.addEventListener("click", () => {
+            carterProfit.classList.add("selected");
+            hannahProfit.classList.remove("selected");
+            carterDetails.classList.add("active");
+            hannahDetails.classList.remove("active");
+        });
+        
+        hannahProfit.addEventListener("click", () => {
+            hannahProfit.classList.add("selected");
+            carterProfit.classList.remove("selected");
+            hannahDetails.classList.add("active");
+            carterDetails.classList.remove("active");
+        });
+
+        // 頁面加載時默認顯示 Carter 的內容
+        window.onload = () => {
+            carterDetails.classList.add("active");
+            hannahDetails.classList.remove("active");
+            carterProfit.classList.add("selected");
+            hannahProfit.classList.remove("selected");
+        };
 
         init();
     </script>
-
 </body>
 </html>
