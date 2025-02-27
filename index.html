@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- iOS 網頁App 模式 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <!-- iPhone 主畫面圖示，使用與幣種圖片相同的圖片 -->
+  <link rel="apple-touch-icon" href="https://cryptologos.cc/logos/baby-doge-coin-babydoge-logo.png">
   <title>BABYDOGE/USDT 即時價格</title>
   <style>
     /* Reset */
@@ -217,7 +222,7 @@
   </style>
 </head>
 <body>
-  <!-- 進度條 -->
+  <!-- 進度條區 -->
   <div class="progress-container" id="progressContainer">
     <div class="progress-bar" id="progressBar"></div>
     <p id="progressText">載入中: 0%</p>
@@ -297,7 +302,6 @@
           <span class="value" id="hannahProfitRate">計算中...</span>
         </p>
       </div>
-      <!-- 此處美元公告僅顯示一次，不重複 -->
     </div>
   </div>
   
@@ -386,6 +390,12 @@
       document.getElementById('hannahUnrealized').className = hannahUnrealizedTWD >= 0 ? "positive" : "negative";
       document.getElementById('hannahProfitRate').className = hannahProfitRate >= 0 ? "positive" : "negative";
     }
+
+    // 固定數據設定
+    const carterTotalCostTWD = 1690000; 
+    const hannahTotalCostTWD = 20000;    
+    const carterTotalAmount = 21235769401342.17; 
+    const hannahTotalAmount = 411486486486;        
 
     // WebSocket 連線並更新行情價格
     function connectWebSocket() {
