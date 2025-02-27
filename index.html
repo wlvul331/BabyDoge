@@ -111,6 +111,7 @@
       font-size: 18px;
       font-weight: bold;
       cursor: pointer;
+      position: relative;
     }
     .profit-selection.expand {
       opacity: 1;
@@ -119,21 +120,20 @@
     .profit-selection span {
       padding: 5px 20px;
       position: relative;
+      z-index: 1;
     }
-    .profit-selection span::after {
-      content: "";
+    .profit-selection span.selected {
+      color: #000;
+    }
+    /* 滑動指示條，藍色漸變效果 */
+    .profit-selection .slider {
       position: absolute;
-      width: 33%;
-      height: 3px;
-      background-color: transparent;
-      bottom: 6px;
-      left: 50%;
-      transform: translateX(-50%);
-      transition: background-color 0.3s, transform 0.3s;
-    }
-    .profit-selection .selected::after {
-      background-color: #00bcd4;
-      transform: translateX(-50%) scaleX(1);
+      bottom: 0;
+      height: 100%;
+      background: linear-gradient(90deg, #00bcd4, #00ffcc);
+      border-radius: 5px;
+      transition: left 0.3s ease, width 0.3s ease;
+      z-index: 0;
     }
     /* 盈虧詳細資訊區 */
     .profit-details-container {
@@ -143,8 +143,7 @@
     }
     .profit-details {
       width: 100vw;
-      padding: 0 20px;  /* 左右各留 20px 空間 */
-      padding: 0;
+      padding: 0 20px;
       font-size: 20px;
       text-align: left;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
@@ -190,7 +189,7 @@
     .usd-rate {
       display: block;
       width: 100%;
-      margin-top: 10px; /* 可依需求調整 */
+      margin-top: -5px;
       font-size: 12px;
       color: #fff;
       text-align: center;
@@ -233,6 +232,7 @@
       <span id="carterProfit" class="selected">Carter</span>
       <span id="hannahProfit">Hannah</span>
       <span id="ericProfit">Eric</span>
+      <div class="slider"></div>
     </div>
     <!-- 盈虧詳細資訊（固定格式，共用區塊） -->
     <div class="profit-details-container">
@@ -284,6 +284,7 @@
     const hannahProfit = document.getElementById('hannahProfit');
     const ericProfit = document.getElementById('ericProfit');
     const usdRateElem = document.getElementById('usdRateValue');
+    const sliderElement = profitSelection.querySelector('.slider');
     
     // 固定資料設定
     const profiles = {
@@ -392,6 +393,7 @@
               setTimeout(() => {
                 content.classList.add("expand");
                 profitSelection.classList.add("expand");
+                updateSlider();
               }, 500);
             }, 1000);
           }, 50);
@@ -403,6 +405,17 @@
       await fetchExchangeRate();
       await fetchOneDayAgoPrice();
       connectWebSocket();
+    }
+
+    // 更新 slider 位置與寬度
+    function updateSlider() {
+      const selected = document.querySelector('.profit-selection span.selected');
+      if (!selected) return;
+      const rect = selected.getBoundingClientRect();
+      const containerRect = profitSelection.getBoundingClientRect();
+      const left = rect.left - containerRect.left;
+      sliderElement.style.left = left + "px";
+      sliderElement.style.width = rect.width + "px";
     }
 
     // 全域預先載入音效
@@ -417,6 +430,7 @@
       carterProfit.classList.add("selected");
       hannahProfit.classList.remove("selected");
       ericProfit.classList.remove("selected");
+      updateSlider();
     });
     hannahProfit.addEventListener("click", () => {
       activeProfile = 'hannah';
@@ -425,6 +439,7 @@
       hannahProfit.classList.add("selected");
       carterProfit.classList.remove("selected");
       ericProfit.classList.remove("selected");
+      updateSlider();
     });
     ericProfit.addEventListener("click", () => {
       activeProfile = 'eric';
@@ -433,12 +448,14 @@
       ericProfit.classList.add("selected");
       carterProfit.classList.remove("selected");
       hannahProfit.classList.remove("selected");
+      updateSlider();
     });
 
     window.onload = () => {
       carterProfit.classList.add("selected");
       hannahProfit.classList.remove("selected");
       ericProfit.classList.remove("selected");
+      updateSlider();
     };
 
     // 點擊幣種圖片時累計旋轉 360°
@@ -448,6 +465,8 @@
       rotationAngle += 360;
       coinImage.style.transform = `rotate(${rotationAngle}deg)`;
     });
+
+    window.addEventListener('resize', updateSlider);
 
     init();
   </script>
