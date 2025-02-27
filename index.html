@@ -459,23 +459,30 @@
       }
     }
 
-    // 點選選單時觸發音效及切換盈虧顯示
-    carterProfit.addEventListener("click", () => {
-      let audio = new Audio('audio/slide-up.mp3');
-      audio.play().catch(err => console.log("播放音效失敗:", err));
-      carterProfit.classList.add("selected");
-      hannahProfit.classList.remove("selected");
-      carterDetails.classList.add("active");
-      hannahDetails.classList.remove("active");
-    });
-    hannahProfit.addEventListener("click", () => {
-      let audio = new Audio('audio/slide-up.mp3');
-      audio.play().catch(err => console.log("播放音效失敗:", err));
-      hannahProfit.classList.add("selected");
-      carterProfit.classList.remove("selected");
-      hannahDetails.classList.add("active");
-      carterDetails.classList.remove("active");
-    });
+	// 全域預先載入音效
+	const slideUpAudio = new Audio('audio/slide-up.mp3');
+	slideUpAudio.load();
+	
+	// 點選選單時觸發音效及切換盈虧顯示
+	carterProfit.addEventListener("click", () => {
+	slideUpAudio.currentTime = 0; // 重設播放位置
+	slideUpAudio.play().catch(err => console.log("播放音效失敗:", err));
+	
+	carterProfit.classList.add("selected");
+	hannahProfit.classList.remove("selected");
+	carterDetails.classList.add("active");
+	hannahDetails.classList.remove("active");
+	});
+	
+	hannahProfit.addEventListener("click", () => {
+	slideUpAudio.currentTime = 0;
+	slideUpAudio.play().catch(err => console.log("播放音效失敗:", err));
+	
+	hannahProfit.classList.add("selected");
+	carterProfit.classList.remove("selected");
+	hannahDetails.classList.add("active");
+	carterDetails.classList.remove("active");
+	});
 
     window.onload = () => {
       carterDetails.classList.add("active");
