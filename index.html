@@ -25,35 +25,25 @@
       flex-direction: column;
       position: relative;
     }
-    /* 進度條 */
+    /* 進度條 - 置中且使用藍色漸變 */
     .progress-container {
-      width: 90%;
-      height: 6px;
       position: absolute;
       top: 50%;
-      transform: translateY(-50%);
-      border-radius: 5px;
-      overflow: hidden;
-      background: rgba(255,255,255,0.1);
-      box-shadow: inset 0 0 5px rgba(255,255,255,0.2);
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 3px;
     }
     .progress-bar {
       height: 100%;
       width: 0%;
-      transition: width 0.3s ease-in-out;
       background: linear-gradient(90deg, #00bcd4, #00ffcc);
-      animation: gradientAnimation 2s infinite linear;
-    }
-    @keyframes gradientAnimation {
-      0% { filter: brightness(1); }
-      50% { filter: brightness(1.2); }
-      100% { filter: brightness(1); }
+      transition: width 0.3s ease;
     }
     .progress-container p {
-      margin-top: 10px;
-      font-size: 14px;
-      font-weight: bold;
-      color: #fff;
+      display: none;
     }
     /* 主資訊區 */
     .main-info {
@@ -99,7 +89,7 @@
       margin-top: 10px;
       transition: color 0.3s ease-in-out;
     }
-    /* 盈虧選擇選單：預設隱藏於左側，不與內容同步展開 */
+    /* 盈虧選擇選單：獨立從左方展開 */
     .profit-selection {
       display: flex;
       justify-content: flex-start;
@@ -108,7 +98,7 @@
       transform: translateX(-100%);
       transform-origin: left;
       transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
-      margin-top: 0px;
+      margin-top: 10px;
       font-size: 18px;
       font-weight: bold;
       position: relative;
@@ -117,7 +107,6 @@
       white-space: nowrap;
       cursor: grab;
     }
-    /* 當展開時，選單以動畫從左展開 */
     .profit-selection.expand {
       opacity: 1;
       transform: translateX(0);
@@ -201,19 +190,20 @@
       color: #fff;
       text-align: center;
     }
-    /* 內容區：保持原有縮放展開效果 */
+    /* 內容區：盈虧內容從中間往外展開 */
     .content {
       display: none;
       flex-direction: column;
       align-items: center;
       position: absolute;
-      top: 20%;
+      top: 50%;
       left: 50%;
       transform: translate(-50%, -50%) scale(0);
+      transform-origin: center;
       transition: all 0.5s ease-in-out;
     }
     .content.expand {
-      transform: translate(-50%, 0) scale(1);
+      transform: translate(-50%, -50%) scale(1);
     }
   </style>
 </head>
@@ -234,7 +224,7 @@
   </div>
   <!-- 內容區：選單與盈虧資訊 -->
   <div class="content" id="content">
-    <!-- 盈虧選擇選單：展開時單獨從左向右進場 -->
+    <!-- 盈虧選擇選單：獨立從左方展開 -->
     <div class="profit-selection" id="profitSelection">
       <span id="carterProfit" class="selected">Carter</span>
       <span id="hannahProfit">Hannah</span>
@@ -393,6 +383,7 @@
               changeBox.style.backgroundImage = "linear-gradient(90deg, #00bcd4, #00ffcc)";
               changeBox.style.backgroundColor = "";
             } else {
+              // 負值以紅色漸變效果顯示
               changeBox.style.backgroundImage = "linear-gradient(90deg, #ff4500, #ff0000)";
               changeBox.style.backgroundColor = "";
             }
@@ -410,7 +401,7 @@
               mainInfo.classList.add("move-to-top");
               content.style.display = "flex";
               content.classList.add("expand");
-              // 分開延遲展開選單區：由左方往右展開
+              // 延遲展開選單區：由左方往右展開
               setTimeout(() => {
                 profitSelection.classList.add("expand");
                 updateSlider();
