@@ -25,6 +25,20 @@
       flex-direction: column;
       position: relative;
     }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-image: url("https://cryptologos.cc/logos/baby-doge-coin-babydoge-logo.png");
+      background-repeat: no-repeat;
+      background-size: contain;
+      width: 300px;  /* 可依需求調整尺寸 */
+      height: 300px;
+      opacity: 0.1;  /* 調整透明度 */
+      z-index: -1;   /* 確保在內容之後 */
+    }
     /* 進度條 - 置中且使用藍色漸變 */
     .progress-container {
       position: absolute;
