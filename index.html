@@ -99,27 +99,28 @@
       margin-top: 10px;
       transition: color 0.3s ease-in-out;
     }
-    /* 盈虧選擇選單 */
+    /* 盈虧選擇選單：預設隱藏於左側，不與內容同步展開 */
     .profit-selection {
       display: flex;
       justify-content: flex-start;
       gap: 0.05px;
       opacity: 0;
-      transform: scaleX(0);
+      transform: translateX(-100%);
+      transform-origin: left;
       transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
       margin-top: 0.05px;
       font-size: 18px;
       font-weight: bold;
       position: relative;
       user-select: none;
-      /* 允許水平滾動 */
       overflow-x: auto;
       white-space: nowrap;
       cursor: grab;
     }
+    /* 當展開時，選單以動畫從左展開 */
     .profit-selection.expand {
       opacity: 1;
-      transform: scaleX(1);
+      transform: translateX(0);
     }
     .profit-selection span {
       padding: 5px 20px;
@@ -200,7 +201,7 @@
       color: #fff;
       text-align: center;
     }
-    /* 內容區 */
+    /* 內容區：保持原有縮放展開效果 */
     .content {
       display: none;
       flex-direction: column;
@@ -233,7 +234,7 @@
   </div>
   <!-- 內容區：選單與盈虧資訊 -->
   <div class="content" id="content">
-    <!-- 盈虧選擇選單 -->
+    <!-- 盈虧選擇選單：展開時單獨從左向右進場 -->
     <div class="profit-selection" id="profitSelection">
       <span id="carterProfit" class="selected">Carter</span>
       <span id="hannahProfit">Hannah</span>
@@ -408,11 +409,12 @@
             setTimeout(() => {
               mainInfo.classList.add("move-to-top");
               content.style.display = "flex";
+              content.classList.add("expand");
+              // 分開延遲展開選單區：由左方往右展開
               setTimeout(() => {
-                content.classList.add("expand");
                 profitSelection.classList.add("expand");
                 updateSlider();
-              }, 500);
+              }, 300);
             }, 1000);
           }, 50);
         }
@@ -479,7 +481,6 @@
     let containerDragMoved = false;
 
     profitSelection.addEventListener("mousedown", (e) => {
-      // 若點擊目標非 span（或即將拖曳），則開始滾動
       isContainerDragging = true;
       containerDragStartX = e.pageX;
       containerScrollStart = profitSelection.scrollLeft;
@@ -496,14 +497,13 @@
       updateSlider();
     });
 
-    window.addEventListener("mouseup", (e) => {
+    window.addEventListener("mouseup", () => {
       if (isContainerDragging) {
         isContainerDragging = false;
       }
     });
 
     // --- 以下為「盈虧訊息區拖曳」功能 ---
-    // 拖曳 profitDetailsContainer 超過門檻後，根據拖曳方向切換至相鄰選單項目
     let isSwiping = false;
     let swipeStartX = 0;
     const swipeThreshold = 50; // 門檻值
