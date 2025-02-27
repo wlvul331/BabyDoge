@@ -380,7 +380,7 @@
       const ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
       let progress = 0;
       const interval = setInterval(() => {
-        progress += 10;
+        progress += 1;
         updateProgressBar(progress);
         if (progress >= 90) clearInterval(interval);
       }, 300);
