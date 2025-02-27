@@ -25,6 +25,12 @@
       flex-direction: column;
       position: relative;
     }
+   /* 如果需要針對手機解析度做更強烈的調整 */
+   @media (max-width: 600px) {
+     body {
+      background: linear-gradient(135deg, #000000 0%, #000000 50%, #1a1a1a 100%);
+     }
+    }
     body::before {
       content: "";
       position: absolute;
