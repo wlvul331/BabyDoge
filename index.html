@@ -12,6 +12,7 @@
       padding: 0;
       box-sizing: border-box;
     }
+    /* 背景：黑色漸變，並在中央放置透明幣種圖片 */
     body {
       overflow-x: hidden;
       display: flex;
@@ -34,21 +35,22 @@
       background-image: url("https://cryptologos.cc/logos/baby-doge-coin-babydoge-logo.png");
       background-repeat: no-repeat;
       background-size: contain;
-      width: 300px;  /* 可依需求調整尺寸 */
+      width: 300px;
       height: 300px;
-      opacity: 0.1;  /* 調整透明度 */
-      z-index: -1;   /* 確保在內容之後 */
+      opacity: 0.1;
+      z-index: -1;
     }
-    /* 進度條 - 置中且使用藍色漸變 */
+    /* 進度條 - 置中顯示，藍色漸變，百分比文字置於進度條上方 */
     .progress-container {
       position: absolute;
-      top: 50%;
-      left: 50%;
+      top: 0%;
+      left: 25%;
       transform: translate(-50%, -50%);
-      width: 80%;
+      width: 50%;
       height: 6px;
       background: rgba(0, 0, 0, 0.2);
       border-radius: 3px;
+      position: relative;
     }
     .progress-bar {
       height: 100%;
@@ -57,7 +59,14 @@
       transition: width 0.3s ease;
     }
     .progress-container p {
-      display: none;
+      position: absolute;
+      top: -25px;  /* 放在進度條上方 */
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      color: #fff;
+      margin: 0;
+      pointer-events: none;
     }
     /* 主資訊區 */
     .main-info {
@@ -162,7 +171,6 @@
     .profit-details.active {
       display: block;
     }
-    /* 每一行：標籤在上、數字在下 */
     .profit-details p {
       width: 100%;
       margin: 10px 0;
@@ -175,7 +183,6 @@
       display: block;
       text-align: right;
     }
-    /* 雙行顯示 */
     .double-line {
       margin: 10px 0;
     }
@@ -188,14 +195,12 @@
       text-align: right;
       margin-top: 5px;
     }
-    /* 數值顏色 */
     .positive {
       color: #00bcd4;
     }
     .negative {
       color: orangered;
     }
-    /* 美元公告 */
     .usd-rate {
       display: block;
       width: 100%;
@@ -225,7 +230,7 @@
   <!-- 進度條 -->
   <div class="progress-container" id="progressContainer">
     <div class="progress-bar" id="progressBar"></div>
-    <p id="progressText">載入中: 0%</p>
+    <p id="progressText">0%</p>
   </div>
   <!-- 主資訊區 -->
   <div class="main-info" id="mainInfo">
@@ -273,7 +278,7 @@
           <span class="value" id="profitRate">計算中...</span>
         </p>
       </div>
-      <div class="usd-rate">當前美元匯率: 1 USD = <span id="usdRateValue"></span> TWD</div>
+      <div class="usd-rate">美元匯率: 1 USD = <span id="usdRateValue"></span> TWD</div>
     </div>
   </div>
   
@@ -367,7 +372,7 @@
 
     function updateProgressBar(progress) {
       progressBar.style.width = `${progress}%`;
-      progressText.textContent = `載入中: ${progress}%`;
+      progressText.textContent = `${progress}%`;
     }
 
     // WebSocket 連線並更新行情價格
@@ -415,13 +420,13 @@
               mainInfo.classList.add("move-to-top");
               content.style.display = "flex";
               content.classList.add("expand");
-              // 延遲展開選單區：由左方往右展開
+              // 延遲展開選單區：從左方往右展開
               setTimeout(() => {
                 profitSelection.classList.add("expand");
                 updateSlider();
               }, 300);
             }, 1000);
-          }, 50);
+          }, 500);
         }
       };
     }
