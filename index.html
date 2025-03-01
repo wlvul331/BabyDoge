@@ -124,10 +124,9 @@
       color: #00bcd4;
       margin-top: 10px;
     }
-    /* 選單區塊 */
+    /* 選單區塊：針對手機瀏覽增加橫向滾動 */
     .profit-selection {
       display: flex;
-      justify-content: center;
       gap: 15px;
       margin-top: 20px;
       padding: 10px 20px;
@@ -135,9 +134,8 @@
       border-radius: 25px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       backdrop-filter: blur(10px);
-      /* 移除捲動，取消 overflow-x 與 white-space */
-      overflow: visible;
-      white-space: normal;
+      overflow-x: auto;
+      white-space: nowrap;
       cursor: pointer;
       width: 90%;
       max-width: 500px;
@@ -443,7 +441,7 @@
       hannah: "Hannah的盈虧數據,依據其成本及持倉量計算。",
       eric: "Eric的盈虧數據,依據其投資及持倉量計算。",
       simon: "Simon的盈虧數據,依據其成本及持倉量計算。",
-      kevin: "Kevin的盈虧數據,依據其隨便設定的成本及持倉量計算。"
+      kevin: "Kevin的盈虧數據,依據其成本及持倉量計算。"
     };
 
     // 加入 Kevin 的資料 (此處數值僅供參考，可自行調整)
@@ -760,8 +758,8 @@
       kevinProfit.classList.add("selected");
     });
 
-    // 已移除選單水平捲動相關的事件監聽器
-
+    // 取消原有水平捲動相關事件，但保持觸控滾動功能（瀏覽器會自動支援觸控捲動）
+    
     let isSwiping = false;
     let swipeStartX = 0;
     const swipeThreshold = 50;
