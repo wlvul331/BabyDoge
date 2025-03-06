@@ -191,3 +191,278 @@
   </script>
 </body>
 </html>
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="apple-touch-icon" href="https://cryptologos.cc/logos/tether-usdt-logo.png">
+  <title>合約盈虧計算機</title>
+  <style>
+    /* 重用模板的樣式 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a2525 0%, #000814 70%, #000 100%);
+      transition: background 0.5s ease;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      color: #fff;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-image: url("https://cryptologos.cc/logos/tether-usdt-logo.png");
+      background-repeat: no-repeat;
+      background-size: contain;
+      width: 200px;
+      height: 200px;
+      opacity: 0.08;
+      z-index: -1;
+    }
+    .calculator-container {
+      width: 90%;
+      max-width: 500px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .calculator-container.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00bcd4;
+      margin-bottom: 20px;
+    }
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .input-group label {
+      width: 120px;
+      text-align: right;
+      font-size: 14px;
+      color: #cccccc;
+    }
+    .input-group input, .input-group select {
+      padding: 8px;
+      border: none;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 14px;
+      width: 150px;
+    }
+    .input-group input:focus, .input-group select:focus {
+      outline: none;
+      border: 1px solid #00bcd4;
+    }
+    .input-group button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      background: linear-gradient(90deg, #00bcd4, #00ffcc);
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .input-group button:hover {
+      background: linear-gradient(90deg, #00ffcc, #00bcd4);
+    }
+    .result-box {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      text-align: left;
+      font-size: 14px;
+    }
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+    }
+    .result-label {
+      color: #cccccc;
+    }
+    .result-value {
+      font-weight: bold;
+    }
+    .positive {
+      color: #00bcd4;
+    }
+    .negative {
+      color: orangered;
+    }
+    @media only screen and (max-width: 480px) {
+      .calculator-container {
+        width: 95%;
+      }
+      .input-group label {
+        width: 100%;
+        text-align: left;
+      }
+      .input-group input, .input-group select {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator-container" id="calculator">
+    <h1>合約盈虧計算機</h1>
+    <div class="input-group">
+      <label>合約金額 (USDT):</label>
+      <input type="number" id="contractAmount" step="any" placeholder="輸入USDT金額">
+    </div>
+    <div class="input-group">
+      <label>開倉價格:</label>
+      <input type="number" id="entryPrice" step="any" placeholder="輸入開倉價格">
+    </div>
+    <div class="input-group">
+      <label>平倉價格:</label>
+      <input type="number" id="exitPrice" step="any" placeholder="輸入平倉價格">
+    </div>
+    <div class="input-group">
+      <label>槓桿倍數:</label>
+      <input type="number" id="leverage" step="any" placeholder="輸入槓桿倍數">
+    </div>
+    <div class="input-group">
+      <label>交易方向:</label>
+      <select id="direction">
+        <option value="long">做多 (Long)</option>
+        <option value="short">做空 (Short)</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <button onclick="calculatePnL()">計算盈虧</button>
+    </div>
+    <div class="result-box" id="result" style="display: none;">
+      <div class="result-item">
+        <span class="result-label">持倉價值:</span>
+        <span class="result-value" id="positionValue"></span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">盈虧金額:</span>
+        <span class="result-value" id="pnl"></span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">收益率:</span>
+        <span class="result-value" id="roi"></span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">交易結果:</span>
+        <span class="result-value" id="tradeResult"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 頁面加載動畫
+    window.onload = () => {
+      setTimeout(() => {
+        document.getElementById('calculator').classList.add('active');
+      }, 100);
+    };
+
+    // 計算盈虧函數
+    function calculatePnL() {
+      try {
+        // 獲取輸入值
+        const contractAmount = parseFloat(document.getElementById('contractAmount').value);
+        const entryPrice = parseFloat(document.getElementById('entryPrice').value);
+        const exitPrice = parseFloat(document.getElementById('exitPrice').value);
+        const leverage = parseFloat(document.getElementById('leverage').value);
+        const isLong = document.getElementById('direction').value === 'long';
+
+        // 驗證輸入
+        if (isNaN(contractAmount) || isNaN(entryPrice) || isNaN(exitPrice) || isNaN(leverage)) {
+          alert('請輸入有效的數字！');
+          return;
+        }
+        if (contractAmount <= 0 || entryPrice <= 0 || exitPrice <= 0 || leverage <= 0) {
+          alert('請輸入正數值！');
+          return;
+        }
+
+        // 計算持倉價值 (USDT)
+        const positionValue = contractAmount / leverage;
+
+        // 計算合約數量
+        const contractSize = contractAmount / entryPrice;
+
+        // 計算盈虧
+        let pnl;
+        if (isLong) {
+          pnl = (exitPrice - entryPrice) * contractSize;
+        } else {
+          pnl = (entryPrice - exitPrice) * contractSize;
+        }
+
+        // 計算收益率
+        const roi = (pnl / positionValue) * 100;
+
+        // 更新結果並顯示動畫
+        const resultBox = document.getElementById('result');
+        animateValue(document.getElementById('positionValue'), 0, positionValue, 500, v => `${v.toFixed(2)} USDT`);
+        animateValue(document.getElementById('pnl'), 0, pnl, 500, v => `${v >= 0 ? '+' : ''}${v.toFixed(2)} USDT`);
+        animateValue(document.getElementById('roi'), 0, roi, 500, v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`);
+        document.getElementById('tradeResult').textContent = pnl > 0 ? '盈利' : (pnl < 0 ? '虧損' : '持平');
+
+        // 設置盈虧顏色
+        document.getElementById('pnl').className = `result-value ${pnl >= 0 ? 'positive' : 'negative'}`;
+        document.getElementById('roi').className = `result-value ${pnl >= 0 ? 'positive' : 'negative'}`;
+        document.getElementById('tradeResult').className = `result-value ${pnl >= 0 ? 'positive' : 'negative'}`;
+
+        resultBox.style.display = 'block';
+        resultBox.style.opacity = '0';
+        setTimeout(() => {
+          resultBox.style.opacity = '1';
+        }, 10);
+      } catch (error) {
+        alert('發生錯誤：' + error.message);
+      }
+    }
+
+    // 數值動畫函數（從模板複製）
+    function animateValue(element, start, end, duration, formatter) {
+      const startTime = performance.now();
+      const update = () => {
+        const now = performance.now();
+        const progress = Math.min((now - startTime) / duration, 1);
+        element.textContent = formatter(start + (end - start) * progress);
+        if (progress < 1) requestAnimationFrame(update);
+      };
+      requestAnimationFrame(update);
+    }
+  </script>
+</body>
+</html>
+​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​​
