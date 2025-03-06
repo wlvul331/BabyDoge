@@ -3,61 +3,65 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>計算機工具</title>
-  <link rel="apple-touch-icon" href="https://cryptologos.cc/logos/baby-doge-coin-babydoge-logo.png">
+  <link rel="apple-touch-icon" href="https://cryptologos.cc/logos/tether-usdt-logo.png">
+  <title>合約盈虧計算機</title>
   <style>
-    /* Reset */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    /* 背景及全局字型 */
     body {
-      background: linear-gradient(135deg, #1a2525 0%, #000814 70%, #000 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
+      background: linear-gradient(135deg, #1a2525 0%, #000814 70%, #000 100%);
+      transition: background 0.5s ease;
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
       color: #fff;
       padding: 20px;
       position: relative;
+      overflow: hidden;
     }
-    /* BabyDoge 按鈕 */
-    .babydoge-btn {
-      position: fixed;
-      left: 20px;
-      top: 20px;
-      background: url('https://cryptologos.cc/logos/baby-doge-coin-babydoge-logo.png') no-repeat center;
+    body::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-image: url("https://cryptologos.cc/logos/tether-usdt-logo.png");
+      background-repeat: no-repeat;
       background-size: contain;
-      width: 50px;
-      height: 50px;
-      border: none;
-      cursor: pointer;
+      width: 200px;
+      height: 200px;
+      opacity: 0.08;
+      z-index: -1;
     }
-    /* 計算機容器 */
     .calculator-container {
       width: 90%;
-      max-width: 600px;
+      max-width: 500px;
       background: rgba(0, 0, 0, 0.5);
       border-radius: 10px;
       padding: 20px;
       text-align: center;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      display: none;
+      z-index: 1;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
     }
     .calculator-container.active {
-      display: block;
+      opacity: 1;
+      transform: translateY(0);
     }
     h1 {
-      margin-bottom: 20px;
       font-size: 24px;
       font-weight: bold;
       color: #00bcd4;
+      margin-bottom: 20px;
     }
-    /* 輸入區塊 */
     .input-group {
       display: flex;
       flex-wrap: wrap;
@@ -72,13 +76,13 @@
       color: #cccccc;
     }
     .input-group input, .input-group select {
-      padding: 8px 10px;
+      padding: 8px;
       border: none;
       border-radius: 5px;
-      font-size: 16px;
-      width: 150px;
       background: rgba(255, 255, 255, 0.1);
       color: #fff;
+      font-size: 14px;
+      width: 150px;
     }
     .input-group input:focus, .input-group select:focus {
       outline: none;
@@ -97,43 +101,30 @@
     .input-group button:hover {
       background: linear-gradient(90deg, #00ffcc, #00bcd4);
     }
-    /* 表格樣式 */
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    /* 新增的交易方向按鈕樣式 */
+    .button-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
       margin-bottom: 15px;
     }
-    table th, table td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-      font-size: 14px;
-    }
-    table th {
-      background-color: rgba(255, 255, 255, 0.2);
-    }
-    /* 結果顯示 */
-    .result {
-      font-size: 18px;
-      font-weight: bold;
-      margin-top: 10px;
-    }
-    /* 按鈕樣式 */
-    .calc-btn {
-      padding: 10px 20px;
+    .direction-button {
+      padding: 8px 15px;
       border: none;
       border-radius: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.3s ease;
+    }
+    .direction-button.active {
       background: linear-gradient(90deg, #00bcd4, #00ffcc);
       color: #000;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.3s ease;
-      margin: 5px;
     }
-    .calc-btn:hover {
-      background: linear-gradient(90deg, #00ffcc, #00bcd4);
+    .direction-button:hover {
+      transform: scale(1.05);
     }
-    /* 合約盈虧特有樣式 */
     .result-box {
       margin-top: 20px;
       padding: 15px;
@@ -159,7 +150,6 @@
     .negative {
       color: orangered;
     }
-    /* 響應式設計 */
     @media only screen and (max-width: 480px) {
       .calculator-container {
         width: 95%;
@@ -175,15 +165,20 @@
   </style>
 </head>
 <body>
-  <!-- BabyDoge 按鈕 -->
-  <button class="babydoge-btn" id="babydoge-btn"></button>
-
-  <!-- 合約盈虧計算機 -->
-  <div class="calculator-container" id="contract-calculator">
+  <div class="calculator-container" id="calculator">
     <h1>合約盈虧計算機</h1>
+    <!-- 交易方向按鈕 -->
+    <div class="button-group">
+      <button type="button" class="direction-button active" data-direction="long">做多 (Long)</button>
+      <button type="button" class="direction-button" data-direction="short">做空 (Short)</button>
+    </div>
     <div class="input-group">
-      <label>合約金額 (USDT):</label>
-      <input type="number" id="contractAmount" step="any" placeholder="輸入USDT金額">
+      <label>槓桿倍數:</label>
+      <input type="number" id="leverage" step="any" placeholder="輸入槓桿倍數">
+    </div>
+    <div class="input-group">
+      <label>投入成本 (USDT):</label>
+      <input type="number" id="margin" step="any" placeholder="輸入USDT金額">
     </div>
     <div class="input-group">
       <label>開倉價格:</label>
@@ -192,17 +187,6 @@
     <div class="input-group">
       <label>平倉價格:</label>
       <input type="number" id="exitPrice" step="any" placeholder="輸入平倉價格">
-    </div>
-    <div class="input-group">
-      <label>槓桿倍數:</label>
-      <input type="number" id="leverage" step="any" placeholder="輸入槓桿倍數">
-    </div>
-    <div class="input-group">
-      <label>交易方向:</label>
-      <select id="direction">
-        <option value="long">做多 (Long)</option>
-        <option value="short">做空 (Short)</option>
-      </select>
     </div>
     <div class="input-group">
       <button onclick="calculatePnL()">計算盈虧</button>
@@ -227,80 +211,72 @@
     </div>
   </div>
 
-  <!-- 持倉均價計算機 -->
-  <div class="calculator-container" id="position-calculator">
-    <h1>持倉均價計算機</h1>
-    <div class="input-group">
-      <input type="number" id="price" step="0.01" placeholder="進場價格">
-      <input type="number" id="quantity" step="0.0001" placeholder="進場數量">
-      <button onclick="addPosition()">加入持倉</button>
-    </div>
-    <table id="positionTable">
-      <thead>
-        <tr>
-          <th>序號</th>
-          <th>進場價格</th>
-          <th>進場數量</th>
-          <th>成本 (價格 x 數量)</th>
-        </tr>
-      </thead>
-      <tbody>
-      </tbody>
-    </table>
-    <div>
-      <button class="calc-btn" onclick="calculateAverage()">計算持倉均價</button>
-      <button class="calc-btn" onclick="clearPositions()">清空持倉</button>
-    </div>
-    <div class="result" id="averageResult"></div>
-  </div>
-
   <script>
-    // 預設顯示合約盈虧計算機
-    document.getElementById('contract-calculator').classList.add('active');
+    // 設定預設方向
+    let currentDirection = "long";
 
-    // BabyDoge 按鈕切換功能
-    document.getElementById('babydoge-btn').addEventListener('click', () => {
-      const choice = prompt('請選擇要使用的計算機：\n1. 合約盈虧計算機\n2. 持倉均價計算機\n輸入 1 或 2');
-      if (choice === '1') {
-        document.getElementById('contract-calculator').classList.add('active');
-        document.getElementById('position-calculator').classList.remove('active');
-      } else if (choice === '2') {
-        document.getElementById('position-calculator').classList.add('active');
-        document.getElementById('contract-calculator').classList.remove('active');
-      } else {
-        alert('無效的選擇，請輸入 1 或 2');
-      }
+    // 頁面加載動畫
+    window.onload = () => {
+      setTimeout(() => {
+        document.getElementById('calculator').classList.add('active');
+      }, 100);
+    };
+
+    // 綁定交易方向按鈕事件
+    const directionButtons = document.querySelectorAll('.direction-button');
+    directionButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        // 清除其他按鈕的 active 狀態
+        directionButtons.forEach(btn => btn.classList.remove('active'));
+        // 為點擊的按鈕添加 active 狀態
+        button.classList.add('active');
+        // 更新全域方向變數
+        currentDirection = button.getAttribute('data-direction');
+      });
     });
 
-    // 合約盈虧計算機的 JS
+    // 計算盈虧函數
     function calculatePnL() {
       try {
-        const contractAmount = parseFloat(document.getElementById('contractAmount').value);
+        // 獲取輸入值
+        const margin = parseFloat(document.getElementById('margin').value);
+        const leverage = parseFloat(document.getElementById('leverage').value);
         const entryPrice = parseFloat(document.getElementById('entryPrice').value);
         const exitPrice = parseFloat(document.getElementById('exitPrice').value);
-        const leverage = parseFloat(document.getElementById('leverage').value);
-        const isLong = document.getElementById('direction').value === 'long';
+        const isLong = currentDirection === 'long';
 
-        if (isNaN(contractAmount) || isNaN(entryPrice) || isNaN(exitPrice) || isNaN(leverage)) {
+        // 驗證輸入
+        if (isNaN(margin) || isNaN(leverage) || isNaN(entryPrice) || isNaN(exitPrice)) {
           alert('請輸入有效的數字！');
           return;
         }
-        if (contractAmount <= 0 || entryPrice <= 0 || exitPrice <= 0 || leverage <= 0) {
+        if (margin <= 0 || leverage <= 0 || entryPrice <= 0 || exitPrice <= 0) {
           alert('請輸入正數值！');
           return;
         }
 
-        const positionValue = contractAmount / leverage;
-        const contractSize = contractAmount / entryPrice;
-        let pnl = isLong ? (exitPrice - entryPrice) * contractSize : (entryPrice - exitPrice) * contractSize;
-        const roi = (pnl / positionValue) * 100;
+        // 計算持倉價值 (position value)
+        const positionValue = margin * leverage;
+        // 計算合約數量
+        const contractSize = positionValue / entryPrice;
+        // 計算盈虧
+        let pnl;
+        if (isLong) {
+          pnl = (exitPrice - entryPrice) * contractSize;
+        } else {
+          pnl = (entryPrice - exitPrice) * contractSize;
+        }
+        // 計算收益率
+        const roi = (pnl / margin) * 100;
 
+        // 更新結果並顯示動畫
         const resultBox = document.getElementById('result');
         animateValue(document.getElementById('positionValue'), 0, positionValue, 500, v => `${v.toFixed(2)} USDT`);
         animateValue(document.getElementById('pnl'), 0, pnl, 500, v => `${v >= 0 ? '+' : ''}${v.toFixed(2)} USDT`);
         animateValue(document.getElementById('roi'), 0, roi, 500, v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`);
         document.getElementById('tradeResult').textContent = pnl > 0 ? '盈利' : (pnl < 0 ? '虧損' : '持平');
 
+        // 設置盈虧顏色
         document.getElementById('pnl').className = `result-value ${pnl >= 0 ? 'positive' : 'negative'}`;
         document.getElementById('roi').className = `result-value ${pnl >= 0 ? 'positive' : 'negative'}`;
         document.getElementById('tradeResult').className = `result-value ${pnl >= 0 ? 'positive' : 'negative'}`;
@@ -315,64 +291,7 @@
       }
     }
 
-    // 持倉均價計算機的 JS
-    const positions = [];
-
-    function addPosition() {
-      const price = parseFloat(document.getElementById('price').value);
-      const quantity = parseFloat(document.getElementById('quantity').value);
-
-      if (isNaN(price) || isNaN(quantity) || price <= 0 || quantity <= 0) {
-        alert("請輸入正確的價格與數量！");
-        return;
-      }
-
-      positions.push({ price, quantity });
-      updateTable();
-
-      document.getElementById('price').value = '';
-      document.getElementById('quantity').value = '';
-    }
-
-    function updateTable() {
-      const tbody = document.querySelector('#positionTable tbody');
-      tbody.innerHTML = '';
-      positions.forEach((pos, index) => {
-        const cost = (pos.price * pos.quantity).toFixed(4);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td>${pos.price}</td>
-          <td>${pos.quantity}</td>
-          <td>${cost}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function calculateAverage() {
-      if (positions.length === 0) {
-        alert("請先加入至少一筆持倉資料！");
-        return;
-      }
-      let totalCost = 0;
-      let totalQuantity = 0;
-      positions.forEach(pos => {
-        totalCost += pos.price * pos.quantity;
-        totalQuantity += pos.quantity;
-      });
-
-      const averagePrice = (totalCost / totalQuantity).toFixed(4);
-      document.getElementById('averageResult').innerText = `目前持倉均價：${averagePrice}`;
-    }
-
-    function clearPositions() {
-      positions.length = 0;
-      updateTable();
-      document.getElementById('averageResult').innerText = '';
-    }
-
-    // 動畫函數
+    // 數值動畫函數
     function animateValue(element, start, end, duration, formatter) {
       const startTime = performance.now();
       const update = () => {
