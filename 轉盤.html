@@ -295,7 +295,7 @@
       const degrees = startAngle * 180 / Math.PI % 360;
       const index = Math.floor((360 - degrees) / (360 / options.length)) % options.length;
       const winner = options[index];
-      alert("恭喜你中獎: " + winner);
+      alert("恭喜你選中: " + winner);
       // 呼叫發送 LINE Notify 訊息函式
       sendLineMessage(winner);
       isSpinning = false;
