@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>隨機選項轉盤</title>
+  <style>
+    /* Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    /* 背景與基本設定 */
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a2525 0%, #000814 70%, #000 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      color: #fff;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    body::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-image: url("https://cryptologos.cc/logos/tether-usdt-logo.png");
+      background-repeat: no-repeat;
+      background-size: contain;
+      width: 150px;
+      height: 150px;
+      opacity: 0.08;
+      z-index: -1;
+    }
+    /* 容器設定 */
+    .container {
+      width: 100%;
+      max-width: 600px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00bcd4;
+      margin-bottom: 20px;
+    }
+    /* Canvas 調整 */
+    canvas {
+      width: 100%;
+      max-width: 500px;
+      height: auto;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      margin-bottom: 20px;
+      background: #000;
+    }
+    /* 按鈕樣式 */
+    #spinButton {
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      border-radius: 5px;
+      background: linear-gradient(90deg, #00bcd4, #00ffcc);
+      color: #000;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 300px;
+    }
+    #spinButton:hover {
+      background: linear-gradient(90deg, #00ffcc, #00bcd4);
+    }
+    /* 選項區塊 */
+    .options-section {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .options-section input[type="text"] {
+      padding: 8px;
+      margin-bottom: 10px;
+      font-size: 16px;
+      width: 100%;
+      border: none;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .options-section button {
+      padding: 8px 15px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background: linear-gradient(90deg, #00bcd4, #00ffcc);
+      color: #000;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      width: 100%;
+      max-width: 300px;
+    }
+    .options-section button:hover {
+      background: linear-gradient(90deg, #00ffcc, #00bcd4);
+    }
+    .option-list {
+      margin-top: 15px;
+    }
+    .option-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 8px 10px;
+      border-radius: 5px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .option-buttons button {
+      margin-left: 5px;
+      padding: 5px 10px;
+      font-size: 14px;
+      border: none;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .option-buttons button:hover {
+      background: linear-gradient(90deg, #00bcd4, #00ffcc);
+      color: #000;
+    }
+    /* 小尺寸裝置調整 */
+    @media only screen and (max-width: 480px) {
+      h1 {
+        font-size: 20px;
+      }
+      #spinButton, .options-section button {
+        font-size: 16px;
+      }
+      .option-item {
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>隨機選項轉盤</h1>
+    <canvas id="wheel" width="500" height="500"></canvas>
+    <button id="spinButton">旋轉</button>
+    <div class="options-section">
+      <input type="text" id="optionInput" placeholder="新增選項">
+      <button id="addOption">加入</button>
+      <div class="option-list" id="optionList"></div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const spinButton = document.getElementById('spinButton');
+    const addOptionBtn = document.getElementById('addOption');
+    const optionInput = document.getElementById('optionInput');
+    const optionListDiv = document.getElementById('optionList');
+
+    // 預設選項
+    let options = ['選項1', '選項2', '選項3', '選項4'];
+    let startAngle = 0;
+    let arc = 0;
+    let spinTime = 0;
+    let spinTimeTotal = 0;
+    let isSpinning = false;
+
+    // 更新畫面上的選項列表，並加入編輯、刪除按鈕
+    function updateOptionList() {
+      optionListDiv.innerHTML = '';
+      options.forEach((opt, idx) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'option-item';
+        
+        const span = document.createElement('span');
+        span.textContent = opt;
+        itemDiv.appendChild(span);
+        
+        const btnDiv = document.createElement('div');
+        btnDiv.className = 'option-buttons';
+        // 編輯按鈕
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '編輯';
+        editBtn.addEventListener('click', () => {
+          const newVal = prompt('請輸入新的選項內容：', opt);
+          if(newVal !== null && newVal.trim() !== ''){
+            options[idx] = newVal.trim();
+            updateOptionList();
+          }
+        });
+        btnDiv.appendChild(editBtn);
+        // 刪除按鈕
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '刪除';
+        delBtn.addEventListener('click', () => {
+          if(confirm(`確定刪除 "${opt}" 嗎？`)){
+            options.splice(idx, 1);
+            updateOptionList();
+          }
+        });
+        btnDiv.appendChild(delBtn);
+        
+        itemDiv.appendChild(btnDiv);
+        optionListDiv.appendChild(itemDiv);
+      });
+      drawWheel();
+    }
+
+    // 新增選項事件
+    addOptionBtn.addEventListener('click', () => {
+      const newOption = optionInput.value.trim();
+      if(newOption) {
+        options.push(newOption);
+        optionInput.value = '';
+        updateOptionList();
+      }
+    });
+
+    // 畫出轉盤
+    function drawWheel() {
+      const outsideRadius = 200;
+      const textRadius = 160;
+      const insideRadius = 0;
+      arc = Math.PI * 2 / options.length;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for(let i = 0; i < options.length; i++) {
+        const angle = startAngle + i * arc;
+        // 畫扇形區塊，根據奇偶值變換顏色
+        ctx.fillStyle = i % 2 === 0 ? '#FFCDD2' : '#F8BBD0';
+        ctx.beginPath();
+        ctx.arc(canvas.width/2, canvas.height/2, outsideRadius, angle, angle + arc, false);
+        ctx.arc(canvas.width/2, canvas.height/2, insideRadius, angle + arc, angle, true);
+        ctx.fill();
+
+        // 畫文字：旋轉文字使其置中
+        ctx.save();
+        ctx.fillStyle = '#000';
+        ctx.translate(canvas.width/2, canvas.height/2);
+        ctx.rotate(angle + arc / 2);
+        ctx.textAlign = "right";
+        ctx.font = 'bold 18px Arial';
+        ctx.fillText(options[i], textRadius, 10);
+        ctx.restore();
+      }
+    }
+
+    // 旋轉轉盤
+    function spin() {
+      if(isSpinning || options.length === 0) return;
+      isSpinning = true;
+      spinButton.disabled = true;
+      spinTime = 0;
+      // 旋轉時間隨機介於 4 ~ 7 秒
+      spinTimeTotal = Math.random() * 3000 + 4000;
+      rotateWheel();
+    }
+
+    // 動態旋轉函式
+    function rotateWheel() {
+      spinTime += 30;
+      if(spinTime >= spinTimeTotal) {
+        stopRotateWheel();
+        return;
+      }
+      const spinAngle = easeOut(spinTime, 0, Math.random() * 10 + 10, spinTimeTotal);
+      startAngle += (spinAngle * Math.PI / 180);
+      drawWheel();
+      setTimeout(rotateWheel, 30);
+    }
+
+    // 轉盤停止後計算中獎選項
+    function stopRotateWheel() {
+      const degrees = startAngle * 180 / Math.PI % 360;
+      const index = Math.floor((360 - degrees) / (360 / options.length)) % options.length;
+      const winner = options[index];
+      alert("恭喜你中獎: " + winner);
+      // 呼叫發送 LINE Notify 訊息函式
+      sendLineMessage(winner);
+      isSpinning = false;
+      spinButton.disabled = false;
+    }
+
+    // 緩出函數，用於旋轉速度漸緩
+    function easeOut(t, b, c, d) {
+      const ts = (t /= d) * t;
+      const tc = ts * t;
+      return b + c * (tc + -3 * ts + 3 * t);
+    }
+
+    // 發送 LINE Notify 訊息的函式
+    function sendLineMessage(message) {
+      // 請將 YOUR_ACCESS_TOKEN 替換為您從 LINE Notify 取得的存取權杖
+      const token = 'xtqRadSh51bJhUID0Ws9Hnk04kUJY98LcOmqNXY2vYt';
+      fetch('https://notify-api.line.me/api/notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Bearer ' + token
+        },
+        body: new URLSearchParams({
+          message: '轉盤中獎結果：' + message
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('LINE Notify 發送結果：', data);
+      })
+      .catch(error => {
+        console.error('LINE Notify 發送錯誤：', error);
+      });
+    }
+
+    spinButton.addEventListener('click', spin);
+    updateOptionList();
+  </script>
+</body>
+</html>
