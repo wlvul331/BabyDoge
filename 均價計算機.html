@@ -215,21 +215,26 @@
   <script>
     let currentDirection = "long";
 
+    // 頁面加載時初始化並恢復狀態
     window.onload = () => {
       setTimeout(() => {
         document.getElementById('calculator').classList.add('active');
       }, 100);
+      restoreState(); // 加載時恢復狀態
     };
 
+    // 綁定方向按鈕事件
     const directionButtons = document.querySelectorAll('.direction-button');
     directionButtons.forEach(button => {
       button.addEventListener('click', () => {
         directionButtons.forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
         currentDirection = button.getAttribute('data-direction');
+        saveState(); // 保存狀態
       });
     });
 
+    // 計算盈虧
     function calculatePnL() {
       try {
         const margin = parseFloat(document.getElementById('margin').value);
@@ -272,11 +277,13 @@
         setTimeout(() => {
           resultBox.style.opacity = '1';
         }, 10);
+        saveState(); // 計算後保存狀態
       } catch (error) {
         alert('發生錯誤：' + error.message);
       }
     }
 
+    // 動畫效果
     function animateValue(element, start, end, duration, formatter) {
       const startTime = performance.now();
       const update = () => {
@@ -287,6 +294,46 @@
       };
       requestAnimationFrame(update);
     }
+
+    // 保存狀態到 localStorage
+    function saveState() {
+      const state = {
+        leverage: document.getElementById('leverage').value,
+        margin: document.getElementById('margin').value,
+        entryPrice: document.getElementById('entryPrice').value,
+        exitPrice: document.getElementById('exitPrice').value,
+        direction: currentDirection
+      };
+      localStorage.setItem('calculatorState', JSON.stringify(state));
+    }
+
+    // 從 localStorage 恢復狀態
+    function restoreState() {
+      const state = JSON.parse(localStorage.getItem('calculatorState'));
+      if (state) {
+        document.getElementById('leverage').value = state.leverage;
+        document.getElementById('margin').value = state.margin;
+        document.getElementById('entryPrice').value = state.entryPrice;
+        document.getElementById('exitPrice').value = state.exitPrice;
+        currentDirection = state.direction;
+        directionButtons.forEach(button => {
+          if (button.getAttribute('data-direction') === state.direction) {
+            button.classList.add('active');
+          } else {
+            button.classList.remove('active');
+          }
+        });
+      }
+    }
+
+    // 監聽頁面可見性變化
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        restoreState(); // 頁面可見時恢復狀態
+      } else {
+        saveState(); // 頁面隱藏時保存狀態
+      }
+    });
   </script>
 </body>
 </html>
