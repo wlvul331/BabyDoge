@@ -49,18 +49,17 @@
       </tbody>
     </table>
 
-    <p class="note">資料來源：Binance 即時 WS (1MBABYDOGEUSDT)，匯率：open.er-api.com</p>
+    <!-- ✅ 新增：底部大字顯示總盈虧金額 -->
+    <p id="totalPL" style="text-align:center;font-size:20px;margin-top:14px;font-weight:700;"></p>
   </div>
 
   <script>
-    // ===== 基本設定 =====
     const profile = {
       name: "王芃樺",
       totalAmount: 9496654840000, // BABYDOGE 持倉量
       totalCost: 300000             // 成本 (TWD)
     };
 
-    // DOM 元素
     const els = {
       price: document.getElementById('price'),
       change: document.getElementById('change'),
@@ -71,6 +70,7 @@
       avgPriceUSD: document.getElementById('avgPriceUSD'),
       unrealized: document.getElementById('unrealized'),
       profitRate: document.getElementById('profitRate'),
+      totalPL: document.getElementById('totalPL')
     };
 
     els.totalAmount.textContent = profile.totalAmount.toLocaleString();
@@ -80,7 +80,6 @@
     let lastPrice = null;
     let oneDayAgoPrice = null;
 
-    // 匯率
     async function fetchExchangeRate(){
       try{
         const res = await fetch('https://open.er-api.com/v6/latest/USD');
@@ -92,7 +91,6 @@
       }
     }
 
-    // 昨日收盤價
     async function fetchPrevDay(){
       try{
         const r = await fetch('https://api.binance.com/api/v3/klines?symbol=1MBABYDOGEUSDT&interval=1d&limit=2');
@@ -101,7 +99,6 @@
       }catch(e){ console.log(e); }
     }
 
-    // 即時價格更新
     function connectWS(){
       const ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
       ws.onmessage = (ev)=>{
@@ -136,14 +133,16 @@
       els.unrealized.style.color = profit>=0?"":"var(--neg)";
       els.profitRate.textContent = rate.toFixed(2) + "%";
       els.profitRate.style.color = rate>=0?"":"var(--neg)";
+
+      // ✅ 更新底部總盈虧
+      els.totalPL.textContent = "總盈虧 (TWD)： " + (profit>=0?"+":"") + Math.round(profit).toLocaleString();
+      els.totalPL.style.color = profit>=0 ? "var(--accent)" : "var(--neg)";
     }
 
-    // 初始化
     (async()=>{
       await fetchExchangeRate();
       await fetchPrevDay();
       connectWS();
-      // 初始一次更新
       try{
         const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=1MBABYDOGEUSDT');
         const j = await r.json();
