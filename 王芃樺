@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BABYDOGE/USDT — 王芃樺</title>
+  <style>
+    :root{--bg:#000;--fg:#fff;--accent:#00bcd4;--neg:#ff6b3a}
+    body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;margin:0;padding:20px;}
+    .card{max-width:700px;margin:auto;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px;}
+    h1{font-size:18px;margin:0 0 8px 0;}
+    p.small{font-size:13px;color:rgba(255,255,255,0.7);margin:4px 0;}
+    .row{display:flex;justify-content:space-between;margin:8px 0;}
+    .price{font-size:20px;color:var(--accent);}
+    .change{font-weight:700;padding:4px 8px;border-radius:6px;}
+    .positive{background:linear-gradient(90deg,#00bcd4,#00ffcc);color:#000;}
+    .negative{background:linear-gradient(90deg,#ff8a4d,#ff4d4d);color:#000;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;}
+    td,th{padding:6px;border-bottom:1px dashed rgba(255,255,255,0.1);text-align:left;}
+    .mono{font-family:monospace;}
+    .note{font-size:12px;color:rgba(255,255,255,0.6);margin-top:6px;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>BABYDOGE / USDT — 王芃樺</h1>
+    <p class="small">純文字版盈虧檢視</p>
+
+    <div class="row">
+      <div>
+        <div>即時價格 (USD)</div>
+        <div id="price" class="price mono">載入中...</div>
+      </div>
+      <div>
+        <div>24h 變動</div>
+        <div id="change" class="change mono">--</div>
+      </div>
+    </div>
+    <p class="small">匯率：1 USD = <span id="usdRate">載入中...</span> TWD</p>
+
+    <table>
+      <tbody>
+        <tr><th>總持倉量 (BABYDOGE)</th><td id="totalAmount" class="mono">-</td></tr>
+        <tr><th>總成本 (TWD)</th><td id="totalCost" class="mono">-</td></tr>
+        <tr><th>持倉市值 (TWD)</th><td id="valueTWD" class="mono">-</td></tr>
+        <tr><th>購入均價 (USD)</th><td id="avgPriceUSD" class="mono">-</td></tr>
+        <tr><th>未實現盈虧 (TWD)</th><td id="unrealized" class="mono">-</td></tr>
+        <tr><th>盈虧率</th><td id="profitRate" class="mono">-</td></tr>
+      </tbody>
+    </table>
+
+    <p class="note">資料來源：Binance 即時 WS (1MBABYDOGEUSDT)，匯率：open.er-api.com</p>
+  </div>
+
+  <script>
+    // ===== 基本設定 =====
+    const profile = {
+      name: "王芃樺",
+      totalAmount: 1060338590000, // BABYDOGE 持倉量
+      totalCost: 50000             // 成本 (TWD)
+    };
+
+    // DOM 元素
+    const els = {
+      price: document.getElementById('price'),
+      change: document.getElementById('change'),
+      usdRate: document.getElementById('usdRate'),
+      totalAmount: document.getElementById('totalAmount'),
+      totalCost: document.getElementById('totalCost'),
+      valueTWD: document.getElementById('valueTWD'),
+      avgPriceUSD: document.getElementById('avgPriceUSD'),
+      unrealized: document.getElementById('unrealized'),
+      profitRate: document.getElementById('profitRate'),
+    };
+
+    els.totalAmount.textContent = profile.totalAmount.toLocaleString();
+    els.totalCost.textContent = profile.totalCost.toLocaleString();
+
+    let usdToTwd = 0;
+    let lastPrice = null;
+    let oneDayAgoPrice = null;
+
+    // 匯率
+    async function fetchExchangeRate(){
+      try{
+        const res = await fetch('https://open.er-api.com/v6/latest/USD');
+        const data = await res.json();
+        usdToTwd = data.rates.TWD;
+        els.usdRate.textContent = usdToTwd.toFixed(2);
+      }catch(e){
+        els.usdRate.textContent = "錯誤";
+      }
+    }
+
+    // 昨日收盤價
+    async function fetchPrevDay(){
+      try{
+        const r = await fetch('https://api.binance.com/api/v3/klines?symbol=1MBABYDOGEUSDT&interval=1d&limit=2');
+        const d = await r.json();
+        oneDayAgoPrice = parseFloat(d[0][4]) / 1000000;
+      }catch(e){ console.log(e); }
+    }
+
+    // 即時價格更新
+    function connectWS(){
+      const ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
+      ws.onmessage = (ev)=>{
+        const d = JSON.parse(ev.data);
+        const price = parseFloat(d.c) / 1000000;
+        updatePrice(price);
+        updateHolding(price);
+      };
+      ws.onclose = ()=>setTimeout(connectWS,1000);
+    }
+
+    function updatePrice(p){
+      els.price.textContent = p.toFixed(13);
+      if(oneDayAgoPrice){
+        const ch = (p - oneDayAgoPrice) / oneDayAgoPrice * 100;
+        els.change.textContent = (ch>=0?"+":"") + ch.toFixed(2) + "%";
+        els.change.className = "change mono " + (ch>=0?"positive":"negative");
+      }
+      lastPrice = p;
+    }
+
+    function updateHolding(p){
+      if(!usdToTwd) return;
+      const valueTWD = profile.totalAmount * p * usdToTwd;
+      const avgUSD = (profile.totalCost / usdToTwd) / profile.totalAmount;
+      const profit = valueTWD - profile.totalCost;
+      const rate = profit / profile.totalCost * 100;
+
+      els.valueTWD.textContent = Math.round(valueTWD).toLocaleString();
+      els.avgPriceUSD.textContent = avgUSD.toFixed(13);
+      els.unrealized.textContent = (profit>=0?"+":"") + Math.round(profit).toLocaleString();
+      els.unrealized.style.color = profit>=0?"":"var(--neg)";
+      els.profitRate.textContent = rate.toFixed(2) + "%";
+      els.profitRate.style.color = rate>=0?"":"var(--neg)";
+    }
+
+    // 初始化
+    (async()=>{
+      await fetchExchangeRate();
+      await fetchPrevDay();
+      connectWS();
+      // 初始一次更新
+      try{
+        const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=1MBABYDOGEUSDT');
+        const j = await r.json();
+        const p = parseFloat(j.price)/1000000;
+        updatePrice(p);
+        updateHolding(p);
+      }catch(e){}
+    })();
+  </script>
+</body>
+</html>
