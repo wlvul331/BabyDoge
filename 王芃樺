@@ -56,8 +56,8 @@
     // ===== 基本設定 =====
     const profile = {
       name: "王芃樺",
-      totalAmount: 1060338590000, // BABYDOGE 持倉量
-      totalCost: 50000             // 成本 (TWD)
+      totalAmount: 9496654840000, // BABYDOGE 持倉量
+      totalCost: 300000             // 成本 (TWD)
     };
 
     // DOM 元素
