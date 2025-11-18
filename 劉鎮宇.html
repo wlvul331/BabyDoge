@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BABYDOGE/USDT 多帳戶</title>
+  <style>
+    :root{--bg:#000;--fg:#fff;--accent:#00bcd4;--neg:#ff6b3a}
+    body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;margin:0;padding:20px;}
+    .tabs{display:flex;gap:10px;margin-bottom:20px;}
+    .tab{padding:8px 14px;border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer;}
+    .tab.active{background:var(--accent);color:#000;font-weight:700;}
+    .card{max-width:700px;margin:auto;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px;}
+    h1{font-size:18px;margin:0 0 8px 0;}
+    p.small{font-size:13px;color:rgba(255,255,255,0.7);margin:4px 0;}
+    .row{display:flex;justify-content:space-between;margin:8px 0;}
+    .price{font-size:20px;color:var(--accent);}    
+    .change{font-weight:700;padding:4px 8px;border-radius:6px;}
+    .positive{background:linear-gradient(90deg,#00bcd4,#00ffcc);color:#000;}
+    .negative{background:linear-gradient(90deg,#ff8a4d,#ff4d4d);color:#000;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;}
+    td,th{padding:6px;border-bottom:1px dashed rgba(255,255,255,0.1);text-align:left;}
+    .mono{font-family:monospace;}
+    .note{font-size:12px;color:rgba(255,255,255,0.6);margin-top:6px;}
+  </style>
+</head>
+<body>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchAcc('liu')">劉鎮宇</div>
+    <div class="tab" onclick="switchAcc('wang')">王芃樺</div>
+  </div>
+
+  <div class="card" id="content"></div>
+
+<script>
+// ---- 帳戶資料 ----
+const profiles = {
+  liu:{name:"劉鎮宇",totalAmount:2153938356300,totalCost:50000},
+  wang:{name:"王芃樺",totalAmount:9496654840000,totalCost:300000}
+};
+let active = 'liu';
+let usdToTwd = 0;
+let oneDayAgoPrice = null;
+let lastPrice = null;
+let ws;
+
+function switchAcc(id){
+  active = id;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchAcc('${id}')"]`).classList.add('active');
+  render();
+}
+
+async function fetchExchangeRate(){
+  try{
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    usdToTwd = data.rates.TWD;
+  }catch(e){usdToTwd=0;}
+}
+
+async function fetchPrevDay(){
+  try{
+    const r = await fetch('https://api.binance.com/api/v3/klines?symbol=1MBABYDOGEUSDT&interval=1d&limit=2');
+    const d = await r.json();
+    oneDayAgoPrice = parseFloat(d[0][4]) / 1000000;
+  }catch(e){oneDayAgoPrice=null;}
+}
+
+function connectWS(){
+  if(ws) ws.close();
+  ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
+  ws.onmessage = ev =>{
+    const d = JSON.parse(ev.data);
+    lastPrice = parseFloat(d.c) / 1000000;
+    render();
+  };
+  ws.onclose = ()=>setTimeout(connectWS,1000);
+}
+
+function compute(p){
+  if(!usdToTwd || !p) return null;
+  const prof = profiles[active];
+  const valueTWD = prof.totalAmount * p * usdToTwd;
+  const avgUSD = (prof.totalCost / usdToTwd) / prof.totalAmount;
+  const profit = valueTWD - prof.totalCost;
+  const rate = profit / prof.totalCost * 100;
+  return {valueTWD, avgUSD, profit, rate};
+}
+
+function render(){
+  const p = profiles[active];
+  const calc = compute(lastPrice);
+  let chHTML = '--';
+  if(oneDayAgoPrice && lastPrice){
+    const ch = (lastPrice - oneDayAgoPrice)/oneDayAgoPrice*100;
+    chHTML = `<span class="change mono ${ch>=0?'positive':'negative'}">${ch>=0?'+':''}${ch.toFixed(2)}%</span>`;
+  }
+
+  document.getElementById('content').innerHTML = `
+    <h1>BABYDOGE / USDT — ${p.name}</h1>
+    <p class="small">${p.name} 盈虧檢視</p>
+
+    <div class="row">
+      <div>
+        <div>即時價格 (USD)</div>
+        <div class="price mono">${lastPrice?lastPrice.toFixed(13):'載入中...'}</div>
+      </div>
+      <div>
+        <div>24h 變動</div>
+        <div>${chHTML}</div>
+      </div>
+    </div>
+
+    <p class="small">匯率：1 USD = ${usdToTwd?usdToTwd.toFixed(2):'--'} TWD</p>
+
+    <table>
+      <tbody>
+        <tr><th>總持倉量 (BABYDOGE)</th><td class="mono">${p.totalAmount.toLocaleString()}</td></tr>
+        <tr><th>總成本 (TWD)</th><td class="mono">${p.totalCost.toLocaleString()}</td></tr>
+        <tr><th>持倉市值 (TWD)</th><td class="mono">${calc?Math.round(calc.valueTWD).toLocaleString():'--'}</td></tr>
+        <tr><th>購入均價 (USD)</th><td class="mono">${calc?calc.avgUSD.toFixed(13):'--'}</td></tr>
+        <tr><th>未實現盈虧 (TWD)</th><td class="mono" style="color:${calc?(calc.profit>=0?'var(--accent)':'var(--neg)'):'var(--fg)'}">${calc?(calc.profit>=0?'+':'')+Math.round(calc.profit).toLocaleString():'--'}</td></tr>
+        <tr><th>盈虧率</th><td class="mono" style="color:${calc?(calc.rate>=0?'var(--accent)':'var(--neg)'):'var(--fg)'}">${calc?calc.rate.toFixed(2)+'%':'--'}</td></tr>
+      </tbody>
+    </table>
+
+    <p style="text-align:center;font-size:20px;margin-top:14px;font-weight:700;color:${calc?(calc.profit>=0?'var(--accent)':'var(--neg)'):''}">
+      ${calc?`總盈虧 (TWD)： ${(calc.profit>=0?'+':'')+Math.round(calc.profit).toLocaleString()}`:''}
+    </p>
+  `;
+}
+
+(async()=>{
+  await fetchExchangeRate();
+  await fetchPrevDay();
+  connectWS();
+  try{
+    const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=1MBABYDOGEUSDT');
+    const j = await r.json();
+    lastPrice = parseFloat(j.price)/1000000;
+  }catch(e){}
+  render();
+})();
+</script>
+</body>
+</html>
