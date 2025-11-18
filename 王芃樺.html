@@ -3,15 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BABYDOGE/USDT — 王芃樺</title>
+  <title>BABYDOGE/USDT 多帳戶</title>
   <style>
     :root{--bg:#000;--fg:#fff;--accent:#00bcd4;--neg:#ff6b3a}
     body{background:var(--bg);color:var(--fg);font-family:system-ui,monospace;margin:0;padding:20px;}
+    .tabs{display:flex;gap:10px;margin-bottom:20px;}
+    .tab{padding:8px 14px;border:1px solid rgba(255,255,255,0.2);border-radius:6px;cursor:pointer;}
+    .tab.active{background:var(--accent);color:#000;font-weight:700;}
     .card{max-width:700px;margin:auto;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:16px;}
     h1{font-size:18px;margin:0 0 8px 0;}
     p.small{font-size:13px;color:rgba(255,255,255,0.7);margin:4px 0;}
     .row{display:flex;justify-content:space-between;margin:8px 0;}
-    .price{font-size:20px;color:var(--accent);}
+    .price{font-size:20px;color:var(--accent);}    
     .change{font-weight:700;padding:4px 8px;border-radius:6px;}
     .positive{background:linear-gradient(90deg,#00bcd4,#00ffcc);color:#000;}
     .negative{background:linear-gradient(90deg,#ff8a4d,#ff4d4d);color:#000;}
@@ -22,135 +25,124 @@
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>BABYDOGE / USDT — 王芃樺</h1>
-    <p class="small">王芃樺的總盈虧</p>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchAcc('liu')">王芃樺</div>
+    <div class="tab" onclick="switchAcc('wang')">劉鎮宇</div>
+  </div>
+
+  <div class="card" id="content"></div>
+
+<script>
+// ---- 帳戶資料 ----
+const profiles = {
+  liu:{name:"王芃樺",totalAmount:9496654840000,totalCost:300000},
+  wang:{name:"劉鎮宇",totalAmount:2153938356300,totalCost:50000}
+};
+let active = 'liu';
+let usdToTwd = 0;
+let oneDayAgoPrice = null;
+let lastPrice = null;
+let ws;
+
+function switchAcc(id){
+  active = id;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector(`.tab[onclick="switchAcc('${id}')"]`).classList.add('active');
+  render();
+}
+
+async function fetchExchangeRate(){
+  try{
+    const res = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    usdToTwd = data.rates.TWD;
+  }catch(e){usdToTwd=0;}
+}
+
+async function fetchPrevDay(){
+  try{
+    const r = await fetch('https://api.binance.com/api/v3/klines?symbol=1MBABYDOGEUSDT&interval=1d&limit=2');
+    const d = await r.json();
+    oneDayAgoPrice = parseFloat(d[0][4]) / 1000000;
+  }catch(e){oneDayAgoPrice=null;}
+}
+
+function connectWS(){
+  if(ws) ws.close();
+  ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
+  ws.onmessage = ev =>{
+    const d = JSON.parse(ev.data);
+    lastPrice = parseFloat(d.c) / 1000000;
+    render();
+  };
+  ws.onclose = ()=>setTimeout(connectWS,1000);
+}
+
+function compute(p){
+  if(!usdToTwd || !p) return null;
+  const prof = profiles[active];
+  const valueTWD = prof.totalAmount * p * usdToTwd;
+  const avgUSD = (prof.totalCost / usdToTwd) / prof.totalAmount;
+  const profit = valueTWD - prof.totalCost;
+  const rate = profit / prof.totalCost * 100;
+  return {valueTWD, avgUSD, profit, rate};
+}
+
+function render(){
+  const p = profiles[active];
+  const calc = compute(lastPrice);
+  let chHTML = '--';
+  if(oneDayAgoPrice && lastPrice){
+    const ch = (lastPrice - oneDayAgoPrice)/oneDayAgoPrice*100;
+    chHTML = `<span class="change mono ${ch>=0?'positive':'negative'}">${ch>=0?'+':''}${ch.toFixed(2)}%</span>`;
+  }
+
+  document.getElementById('content').innerHTML = `
+    <h1>BABYDOGE / USDT — ${p.name}</h1>
+    <p class="small">${p.name} 盈虧檢視</p>
 
     <div class="row">
       <div>
         <div>即時價格 (USD)</div>
-        <div id="price" class="price mono">載入中...</div>
+        <div class="price mono">${lastPrice?lastPrice.toFixed(13):'載入中...'}</div>
       </div>
       <div>
         <div>24h 變動</div>
-        <div id="change" class="change mono">--</div>
+        <div>${chHTML}</div>
       </div>
     </div>
-    <p class="small">匯率：1 USD = <span id="usdRate">載入中...</span> TWD</p>
+
+    <p class="small">匯率：1 USD = ${usdToTwd?usdToTwd.toFixed(2):'--'} TWD</p>
 
     <table>
       <tbody>
-        <tr><th>總持倉量 (BABYDOGE)</th><td id="totalAmount" class="mono">-</td></tr>
-        <tr><th>總成本 (TWD)</th><td id="totalCost" class="mono">-</td></tr>
-        <tr><th>持倉市值 (TWD)</th><td id="valueTWD" class="mono">-</td></tr>
-        <tr><th>購入均價 (USD)</th><td id="avgPriceUSD" class="mono">-</td></tr>
-        <tr><th>未實現盈虧 (TWD)</th><td id="unrealized" class="mono">-</td></tr>
-        <tr><th>盈虧率</th><td id="profitRate" class="mono">-</td></tr>
+        <tr><th>總持倉量 (BABYDOGE)</th><td class="mono">${p.totalAmount.toLocaleString()}</td></tr>
+        <tr><th>總成本 (TWD)</th><td class="mono">${p.totalCost.toLocaleString()}</td></tr>
+        <tr><th>持倉市值 (TWD)</th><td class="mono">${calc?Math.round(calc.valueTWD).toLocaleString():'--'}</td></tr>
+        <tr><th>購入均價 (USD)</th><td class="mono">${calc?calc.avgUSD.toFixed(13):'--'}</td></tr>
+        <tr><th>未實現盈虧 (TWD)</th><td class="mono" style="color:${calc?(calc.profit>=0?'var(--accent)':'var(--neg)'):'var(--fg)'}">${calc?(calc.profit>=0?'+':'')+Math.round(calc.profit).toLocaleString():'--'}</td></tr>
+        <tr><th>盈虧率</th><td class="mono" style="color:${calc?(calc.rate>=0?'var(--accent)':'var(--neg)'):'var(--fg)'}">${calc?calc.rate.toFixed(2)+'%':'--'}</td></tr>
       </tbody>
     </table>
 
-    <!-- ✅ 新增：底部大字顯示總盈虧金額 -->
-    <p id="totalPL" style="text-align:center;font-size:20px;margin-top:14px;font-weight:700;"></p>
-  </div>
+    <p style="text-align:center;font-size:20px;margin-top:14px;font-weight:700;color:${calc?(calc.profit>=0?'var(--accent)':'var(--neg)'):''}">
+      ${calc?`總盈虧 (TWD)： ${(calc.profit>=0?'+':'')+Math.round(calc.profit).toLocaleString()}`:''}
+    </p>
+  `;
+}
 
-  <script>
-    const profile = {
-      name: "王芃樺",
-      totalAmount: 9496654840000, // BABYDOGE 持倉量
-      totalCost: 300000             // 成本 (TWD)
-    };
-
-    const els = {
-      price: document.getElementById('price'),
-      change: document.getElementById('change'),
-      usdRate: document.getElementById('usdRate'),
-      totalAmount: document.getElementById('totalAmount'),
-      totalCost: document.getElementById('totalCost'),
-      valueTWD: document.getElementById('valueTWD'),
-      avgPriceUSD: document.getElementById('avgPriceUSD'),
-      unrealized: document.getElementById('unrealized'),
-      profitRate: document.getElementById('profitRate'),
-      totalPL: document.getElementById('totalPL')
-    };
-
-    els.totalAmount.textContent = profile.totalAmount.toLocaleString();
-    els.totalCost.textContent = profile.totalCost.toLocaleString();
-
-    let usdToTwd = 0;
-    let lastPrice = null;
-    let oneDayAgoPrice = null;
-
-    async function fetchExchangeRate(){
-      try{
-        const res = await fetch('https://open.er-api.com/v6/latest/USD');
-        const data = await res.json();
-        usdToTwd = data.rates.TWD;
-        els.usdRate.textContent = usdToTwd.toFixed(2);
-      }catch(e){
-        els.usdRate.textContent = "錯誤";
-      }
-    }
-
-    async function fetchPrevDay(){
-      try{
-        const r = await fetch('https://api.binance.com/api/v3/klines?symbol=1MBABYDOGEUSDT&interval=1d&limit=2');
-        const d = await r.json();
-        oneDayAgoPrice = parseFloat(d[0][4]) / 1000000;
-      }catch(e){ console.log(e); }
-    }
-
-    function connectWS(){
-      const ws = new WebSocket('wss://stream.binance.com:9443/ws/1mbabydogeusdt@ticker');
-      ws.onmessage = (ev)=>{
-        const d = JSON.parse(ev.data);
-        const price = parseFloat(d.c) / 1000000;
-        updatePrice(price);
-        updateHolding(price);
-      };
-      ws.onclose = ()=>setTimeout(connectWS,1000);
-    }
-
-    function updatePrice(p){
-      els.price.textContent = p.toFixed(13);
-      if(oneDayAgoPrice){
-        const ch = (p - oneDayAgoPrice) / oneDayAgoPrice * 100;
-        els.change.textContent = (ch>=0?"+":"") + ch.toFixed(2) + "%";
-        els.change.className = "change mono " + (ch>=0?"positive":"negative");
-      }
-      lastPrice = p;
-    }
-
-    function updateHolding(p){
-      if(!usdToTwd) return;
-      const valueTWD = profile.totalAmount * p * usdToTwd;
-      const avgUSD = (profile.totalCost / usdToTwd) / profile.totalAmount;
-      const profit = valueTWD - profile.totalCost;
-      const rate = profit / profile.totalCost * 100;
-
-      els.valueTWD.textContent = Math.round(valueTWD).toLocaleString();
-      els.avgPriceUSD.textContent = avgUSD.toFixed(13);
-      els.unrealized.textContent = (profit>=0?"+":"") + Math.round(profit).toLocaleString();
-      els.unrealized.style.color = profit>=0?"":"var(--neg)";
-      els.profitRate.textContent = rate.toFixed(2) + "%";
-      els.profitRate.style.color = rate>=0?"":"var(--neg)";
-
-      // ✅ 更新底部總盈虧
-      els.totalPL.textContent = "總盈虧 (TWD)： " + (profit>=0?"+":"") + Math.round(profit).toLocaleString();
-      els.totalPL.style.color = profit>=0 ? "var(--accent)" : "var(--neg)";
-    }
-
-    (async()=>{
-      await fetchExchangeRate();
-      await fetchPrevDay();
-      connectWS();
-      try{
-        const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=1MBABYDOGEUSDT');
-        const j = await r.json();
-        const p = parseFloat(j.price)/1000000;
-        updatePrice(p);
-        updateHolding(p);
-      }catch(e){}
-    })();
-  </script>
+(async()=>{
+  await fetchExchangeRate();
+  await fetchPrevDay();
+  connectWS();
+  try{
+    const r = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=1MBABYDOGEUSDT');
+    const j = await r.json();
+    lastPrice = parseFloat(j.price)/1000000;
+  }catch(e){}
+  render();
+})();
+</script>
 </body>
 </html>
